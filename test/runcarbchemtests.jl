@@ -1,10 +1,8 @@
 
 using Test
 using Logging
-# using DiffEqBase
 using Sundials
 using OrdinaryDiffEq # for QNDF
-# using DifferentialEquations # for QNDF
 
 import PALEOboxes as PB
 import PALEOocean
