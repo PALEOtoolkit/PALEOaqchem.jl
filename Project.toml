@@ -1,0 +1,29 @@
+name = "PALEOaqchem"
+uuid = "673cec3b-17d1-411f-9fcd-71c01c593120"
+authors = ["sd336 "]
+version = "0.1.0"
+
+[deps]
+OrdinaryDiffEq = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"
+PALEOboxes = "804b410e-d900-4b2a-9ecd-f5a06d4c1fd4"
+PALEOco2sys = "3bc61bc2-d22e-4ed6-b77d-fe89e7d9e944"
+SIMD = "fdea26ae-647d-5447-a871-4b548cad5224"
+TestEnv = "1e6cf692-eddd-4d53-88a5-2d735e33781b"
+
+[compat]
+PALEOboxes = "0.20.4, 0.21"
+PALEOco2sys = "0.1.0"
+SIMD = "3.4"
+TestEnv = "1"
+
+[extras]
+DiffEqBase = "2b5f629d-d688-5b77-993f-72d75c75574e"
+Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+Logging = "56ddb016-857b-54e1-b83d-db4d58db5568"
+PALEOmodel = "bf7b4fbe-ccb1-42c5-83c2-e6e9378b660c"
+PALEOocean = "41de04b1-2efd-44ae-92ae-39d71a4fd99b"
+Sundials = "c3572dad-4567-51f8-b174-8c6c989267f4"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["DiffEqBase", "Documenter", "Logging", "PALEOmodel", "PALEOocean", "Sundials", "Test"]

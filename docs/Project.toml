@@ -1,0 +1,15 @@
+[compat]
+Documenter = "0.27"
+DocumenterCitations = "0.2"
+Revise = "3.1"
+julia = "1.6"
+
+[deps]
+Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+DocumenterCitations = "daee34ce-89f3-4625-b898-19384cb65244"
+PALEOaqchem = "673cec3b-17d1-411f-9fcd-71c01c593120"
+PALEOco2sys = "3bc61bc2-d22e-4ed6-b77d-fe89e7d9e944"
+Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
+
+[extras]
+PALEOboxes = "804b410e-d900-4b2a-9ecd-f5a06d4c1fd4"
