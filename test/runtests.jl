@@ -6,6 +6,6 @@ using Documenter
 
 @testset "PALEOaqchem all" begin
 
-# include("runcarbchemtests.jl")
+include("runcarbchemtests.jl")
 
 end

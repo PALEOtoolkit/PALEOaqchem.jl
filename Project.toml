@@ -1,15 +1,17 @@
 name = "PALEOaqchem"
 uuid = "673cec3b-17d1-411f-9fcd-71c01c593120"
 authors = ["sd336 "]
-version = "0.1.1"
+version = "0.1.2"
 
 [deps]
 PALEOboxes = "804b410e-d900-4b2a-9ecd-f5a06d4c1fd4"
+PALEOco2sys = "3bc61bc2-d22e-4ed6-b77d-fe89e7d9e944"
 SIMD = "fdea26ae-647d-5447-a871-4b548cad5224"
 TestEnv = "1e6cf692-eddd-4d53-88a5-2d735e33781b"
 
 [compat]
 PALEOboxes = "0.20.4, 0.21"
+PALEOco2sys = "0.1"
 SIMD = "3.4"
 TestEnv = "1"
 
