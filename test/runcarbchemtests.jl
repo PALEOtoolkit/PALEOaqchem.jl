@@ -3,6 +3,7 @@ using Test
 using Logging
 using Sundials
 using OrdinaryDiffEq # for QNDF
+using BenchmarkTools
 
 import PALEOboxes as PB
 import PALEOocean
@@ -30,6 +31,11 @@ configfile = joinpath(@__DIR__, "configcarbchem.yaml")
     # Check CO2SYS 
     
     PB.do_deriv(modeldata.dispatchlists_all)
+
+    PB.TestUtils.bench_model(
+        model, modeldata; 
+        bench_whole=false, domainname="ocean", reactionname="carbchem", methodname="do_carbchem"
+    )
    
     println("ocean  model created variables after do_stateandeqb:")
     ocean_domain = PB.get_domain(model, "ocean")
