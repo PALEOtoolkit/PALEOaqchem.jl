@@ -1,7 +1,7 @@
 name = "PALEOaqchem"
 uuid = "673cec3b-17d1-411f-9fcd-71c01c593120"
 authors = ["sd336 "]
-version = "0.1.2"
+version = "0.2.0"
 
 [deps]
 PALEOboxes = "804b410e-d900-4b2a-9ecd-f5a06d4c1fd4"
