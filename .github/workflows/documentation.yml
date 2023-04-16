@@ -16,7 +16,7 @@ jobs:
         with:
           version: '1.6'
       - name: Install dependencies
-        run: julia --project=docs/ -e 'using Pkg; Pkg.develop([PackageSpec(path=pwd()), PackageSpec(url="https://github.com/PALEOtoolkit/PALEOco2sys.jl")]); Pkg.instantiate()'
+        run: julia --project=docs/ -e 'using Pkg; Pkg.develop([PackageSpec(path=pwd()), PackageSpec(url="https://github.com/PALEOtoolkit/PALEOcarbchem.jl")]); Pkg.instantiate()'
       - name: Build and deploy
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # If authenticating with GitHub Actions token
