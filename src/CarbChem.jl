@@ -5,7 +5,7 @@ using PALEOboxes.DocStrings
 
 import SIMD
 
-import PALEOcarbchem
+import ..PALEOcarbchem
 
 # import Infiltrator  # Julia debugger
 

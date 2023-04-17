@@ -33,6 +33,7 @@ StoichPars() = PB.ParametersTuple(
     PB.ParDouble("rCcarbCorg", 0.0, units="",  description="ratio of Ccarb to Corg produced"),
 )
 
+include("PALEOcarbchem/PALEOcarbchem.jl") # PALEOcarbchem module
 
 include("CarbChem.jl")
 

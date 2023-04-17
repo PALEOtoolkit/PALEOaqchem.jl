@@ -1,19 +1,18 @@
 name = "PALEOaqchem"
 uuid = "673cec3b-17d1-411f-9fcd-71c01c593120"
 authors = ["sd336 "]
-version = "0.2.0"
+version = "0.3.0"
 
 [deps]
 PALEOboxes = "804b410e-d900-4b2a-9ecd-f5a06d4c1fd4"
-PALEOcarbchem = "a89bb9f4-8ac6-4e57-a46e-2f36c79f6dd2"
 SIMD = "fdea26ae-647d-5447-a871-4b548cad5224"
 TestEnv = "1e6cf692-eddd-4d53-88a5-2d735e33781b"
 
 [compat]
-PALEOboxes = "0.20.4, 0.21"
-PALEOcarbchem = "0.1"
+PALEOboxes = "0.21"
 SIMD = "3.4"
 TestEnv = "1"
+julia = "1.6"
 
 [extras]
 BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
@@ -23,8 +22,9 @@ OrdinaryDiffEq = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"
 PALEOmodel = "bf7b4fbe-ccb1-42c5-83c2-e6e9378b660c"
 PALEOocean = "41de04b1-2efd-44ae-92ae-39d71a4fd99b"
 Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
+SLEEF_jll = "63e82ce6-3d80-5af4-a84c-484b71ab98bb"
 Sundials = "c3572dad-4567-51f8-b174-8c6c989267f4"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["BenchmarkTools", "Documenter", "Logging", "OrdinaryDiffEq", "PALEOmodel", "PALEOocean", "Revise", "Sundials", "Test"]
+test = ["BenchmarkTools", "Documenter", "Logging", "OrdinaryDiffEq", "PALEOmodel", "PALEOocean", "Revise", "SLEEF_jll", "Sundials", "Test"]

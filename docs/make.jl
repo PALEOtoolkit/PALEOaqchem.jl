@@ -18,6 +18,7 @@ makedocs(bib, sitename="PALEOaqchem Documentation",
         "Reference" => [
             "PALEOaqchem Reactions.md",
             "PALEOaqchem functions.md",
+            "PALEOcarbchem.md",
         ],
         "References.md",
         "indexpage.md",
