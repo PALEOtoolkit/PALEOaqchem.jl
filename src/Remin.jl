@@ -1,6 +1,7 @@
 module Remin
 
 import PALEOboxes as PB
+import PALEOaqchem
 using PALEOboxes.DocStrings
 
 "Stoichiometry for organic matter oxidation by O2"
@@ -381,7 +382,7 @@ function do_ReminParticulateFluxes(
         Nremin = (N, 0.0, 0.0)  # all implicitly as NO3, no N cycle in this configuration
     end
         
-    (O2eq, TAlk) = PALEOreactions.BioGeoChem.O2AlkUptakeRemin(Corg, Nremin, P, Ccarb)
+    (O2eq, TAlk) = PALEOaqchem.O2AlkUptakeRemin(Corg, Nremin, P, Ccarb)
 
     PB.add_if_available(output_solute_fluxes.DIC, i, Corg + Ccarb)
     PB.add_if_available(output_solute_fluxes.TAlk, i, TAlk)
@@ -394,124 +395,6 @@ function do_ReminParticulateFluxes(
 
 end
 
-
-#= 
-"""
-    ReactionRemin
-
-Organic particulate matter remineralization
-
-# Implementation:
-This is implemented as two (almost) separate pieces:
-- transfer of remineralized C, N, P to solute, with corresponding oxidant demand `O2eq`
-- reduction of oxidants to provide `O2eq`
-
-"""
-Base.@kwdef mutable struct ReactionRemin <: PB.AbstractReaction
-    base::PB.ReactionBase
-
-    par_reminpathway::PB.ParString = PB.ParString("reminpathway", "Ponly", allowed_values=["Ponly", "O2", "O2_SO4", "O2_SO4_CH4"])
-
-    par_Ncycle::PB.ParBool= PB.ParBool("Ncycle",false,   description="true to remineralize to NH3 for configuration with N cycle, false to implicitly remin to NO3")
-
-    vars_soluteflux_P = PB.VarContrib("soluteflux_P", "mol yr-1", "P remineralized from organic particulate", PB.RP_React) 
-    vars_soluteflux_TNH3 = PB.VarContrib("(soluteflux_TNH3)", "mol yr-1", "total NH3 from remineralization of organic particulate", PB.RP_React)
-    vars_soluteflux_DIC = PB.VarContrib("(soluteflux_DIC)", "mol yr-1", "DIC from remineralization of organic particulate", PB.RP_React)
-    vars_soluteflux_TAlk = PB.VarContrib("(soluteflux_TAlk)", "mol yr-1", "TAlk from remineralization of organic particulate", PB.RP_React)
-
-    vars_input = nothing
-
-    oxidants = nothing
-
-end
-
-
-function PB.initialize_parameters(rj::ReactionRemin)
-
-    isotope_type = PB.VC_Single  # no isotopes yet
-    
-    rj.vars_input = PALEOreactions.BioGeoChem.fluxBioProdTarget(rj.par_fluxlist.v, prefix="remin_", isotope_type=isotope_type)
-    PB.add_var(rj, rj.vars_input)
-
-    if rj.par_reminpathway.v == "Ponly"
-        rj.oxidants = Oxidants_Ponly
-    elseif rj.par_reminpathway.v == "O2"
-        rj.oxidants = Oxidants_O2
-    else
-        error("invalid reminpathway='$(rj.par.reminpathway.v)")
-    end
-
-    return nothing
-end
-
-
-function PB.initialize_data(rj::ReactionRemin, modeldata::PB.ModelData)
-    
-    return (rj.oxidants,
-            PB.create_accessors_oxidants(rj.oxidants, modeldata),
-            PB.create_accessors_namedtuple(rj.vars_remin, modeldata),
-            PB.create_accessors_namedtuple(rj.variables, modeldata))
-end
-
-function PB.do_react(rj::ReactionRemin, (oxidants, vars_oxidants, vars_remin, vars), cellrange::PB.AbstractCellRange, deltat)
-
-    for i in cellrange.indices
-        (P, N, Corg, Ccarb) = (vars_remin.P[i], vars_remin.N[i], vars_remin.Corg[i], vars_remin.Ccarb[i])
-
-        vars.soluteflux_P[i] += vars_remin.P[i]
-
-        if rj.par_Ncycle.v
-            Nremin = (0.0, N, 0.0)  # all as NH3
-            vars.soluteflux_TNH3[i] += N
-        else
-            Nremin = (N, 0.0, 0.0)  # all implicitly as NO3, no N cycle in this configuration
-        end
-            
-        (O2eq, TAlk) = PALEOreactions.BioGeoChem.O2AlkUptakeRemin(Corg, Nremin, P, Ccarb)
-
-        PB.add_if_available(vars.soluteflux_DIC, i, Corg + Ccarb)
-        PB.add_if_available(vars.soluteflux_TAlk, i, TAlk)
-
-        do_oxidants(rj, oxidants, (vars_oxidants, vars), i, O2eq)
-    end
-
-    return nothing
-end
-
-
-Base.@kwdef mutable struct Oxidants_Ponly
-end
-
-function create_Oxidants_Ponly(rj::ReactionRemin)
-    return Oxidants_Ponly()
-end
-
-function create_accessors_oxidants(oxidants::Oxidants_Ponly, modeldata::PB.ModelData)
-    return nothing
-end
-
-function do_oxidants(rj::ReactionRemin, oxidants::Oxidants_Ponly, (vars_oxidants, vars), idx, O2eq)
-end
-
-
-Base.@kwdef mutable struct Oxidants_O2
-    soluteflux_O2 = PB.VarContrib("soluteflux_O2", "mol yr-1", "O2 from remineralization of organic particulate", PB.RP_React) 
-end
-
-function create_Oxidants_O2(rj::ReactionRemin)
-    oxidants = Oxidants_O2()
-    PB.add_vars_fields(rj, oxidants)
-end
-
-function do_oxidants(rj::ReactionRemin, oxidants::Oxidants_O2, (vars_oxidants, vars), idx, O2eq)
-    vars_oxidants.oxidantflux_O2[idx] += O2eq
-end
-
-function create_accessors_oxidants(oxidants::Oxidants_O2, modeldata::PB.ModelData)
-    return PB.create_accessors_namedtuple_fields(oxidants, modeldata)
-end
-
- =#
 
 
 end # module
