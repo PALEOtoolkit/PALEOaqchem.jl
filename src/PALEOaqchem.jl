@@ -1,6 +1,6 @@
 module PALEOaqchem
 
-
+import PALEOboxes as PB
 
 """
     O2AlkUptakeRemin(Corg, (NO3, TNH3, Ngas), TPO4, Ccarb; rO2Corg=1) -> (O2, Alk)
@@ -9,6 +9,18 @@ Oxygen and alkalinity assimilated for production (or released by remineralisatio
 with specified Corg, Ccarb from specified nitrate NO3, total ammonia TNH3, gaseous N, total phosphate TPO4
 
 NB sign: for Corg +ve, O2 is -ve (ie quantity to subtract from tracer sms for production, or add for remineralisation)
+
+# Examples
+```jldoctest; setup=:(import PALEOaqchem)
+julia> PALEOaqchem.O2AlkUptakeRemin(106.0, (0.0, 0.0, 0.0), 1.0, 0.0) # Corg:P = 106:1, no N
+(-106.0, 0.0)
+
+julia> PALEOaqchem.O2AlkUptakeRemin(106.0, (16.0, 0.0, 0.0), 1.0, 0.0) # Corg:NO3:P = 106:16:1
+(-138.0, -16.0)
+
+julia> PALEOaqchem.O2AlkUptakeRemin(106.0, (0.0, 16.0, 0.0), 1.0, 0.0) # Corg:TNH3:P = 106:16:1
+(-106.0, 16.0)
+```
 """
 function O2AlkUptakeRemin(Corg, (NO3, TNH3, Ngas), TPO4, Ccarb; rO2Corg=1)
 
@@ -21,17 +33,6 @@ function O2AlkUptakeRemin(Corg, (NO3, TNH3, Ngas), TPO4, Ccarb; rO2Corg=1)
     return (O2, Alk)
 end
 
-
-"""
-    StoichPars() -> PB.ParametersTuple
-
-Parameters defining particulate organic matter stoichiometry
-"""
-StoichPars() = PB.ParametersTuple(
-    PB.ParDouble("rCorgPO4",  106.0, units="", description="Corg:P Redfield ratio"),
-    PB.ParDouble("rNPO4",     16.0, units="",  description="N:P Redfield ratio"),
-    PB.ParDouble("rCcarbCorg", 0.0, units="",  description="ratio of Ccarb to Corg produced"),
-)
 
 include("PALEOcarbchem/PALEOcarbchem.jl") # PALEOcarbchem module
 
