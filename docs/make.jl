@@ -4,9 +4,13 @@ import PALEOaqchem
 
 using DocumenterCitations
 
-bib = CitationBibliography(joinpath(@__DIR__, "src/paleoaqchem_references.bib"))
+bib = CitationBibliography(
+    joinpath(@__DIR__, "src/paleoaqchem_references.bib");
+    style=:authoryear,
+)
 
-makedocs(bib, sitename="PALEOaqchem Documentation", 
+makedocs(;
+    sitename = "PALEOaqchem Documentation", 
     pages = [
         "index.md",
         # "Examples and Tutorials" => examples_pages,
@@ -26,6 +30,7 @@ makedocs(bib, sitename="PALEOaqchem Documentation",
     format = Documenter.HTML(
         prettyurls = get(ENV, "CI", nothing) == "true"
     ),
+    plugins = [bib],
 )
 
 @info "Local html documentation is available at $(joinpath(@__DIR__, "build/index.html"))"

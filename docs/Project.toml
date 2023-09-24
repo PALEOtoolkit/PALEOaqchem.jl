@@ -5,8 +5,8 @@ PALEOaqchem = "673cec3b-17d1-411f-9fcd-71c01c593120"
 Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
 
 [compat]
-Documenter = "0.27"
-DocumenterCitations = "0.2"
+Documenter = "1"
+DocumenterCitations = "1"
 Revise = "3.1"
 julia = "1.6"
 
