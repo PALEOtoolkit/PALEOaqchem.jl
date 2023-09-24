@@ -6,6 +6,4 @@ CurrentModule = PALEOaqchem
 
 ```@docs
 O2AlkUptakeRemin
-
-StoichPars
 ```
