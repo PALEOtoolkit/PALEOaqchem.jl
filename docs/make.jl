@@ -6,7 +6,7 @@ using DocumenterCitations
 
 bib = CitationBibliography(
     joinpath(@__DIR__, "src/paleoaqchem_references.bib");
-    citationstyle=:authoryear,
+    style=:authoryear,
 )
 
 makedocs(;
