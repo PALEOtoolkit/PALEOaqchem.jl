@@ -46,5 +46,6 @@ include("Particle.jl")
 
 include("Boron.jl")
 
+include("MolecularDiffusion.jl")
 
 end # module PALEOaqchem
