@@ -134,8 +134,6 @@ function do_flux_to_components(
     cellrange::PB.AbstractCellRange,
     deltat
 )
-    stoich = m.p
-
     # inputflux and outflux are the same type (both isotopes, or both scalars)
     function do_outflux(outflux::AbstractVector{T}, stoich, inputflux::AbstractVector{T})  where {T}
         @inbounds for i in cellrange.indices
