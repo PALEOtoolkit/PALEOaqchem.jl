@@ -36,6 +36,7 @@ constraint on total [FeII]  | FeIIaqtot_constraint    | Constraint
 See:
 - Rickard (2006) GCA https://10.1016/j.gca.2006.02.029
 - Rickard and Luther (2007) Chemical Reviews https://dx.doi.org/10.1021/cr0503658
+- Lenton and Daines (2017) Ann. Rev. Mar. Sci. https://dx.doi.org/10.1146/annurev-marine-010816-060521
 - van de Velde etal (2021) GMD https://10.5194/gmd-14-2713-2021
 
 # Parameters
