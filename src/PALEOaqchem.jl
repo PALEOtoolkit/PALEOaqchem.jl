@@ -42,6 +42,8 @@ include("Remin.jl")
 
 include("SecondaryRedox.jl")
 
+include("FeS.jl")
+
 include("Particle.jl")
 
 include("Boron.jl")

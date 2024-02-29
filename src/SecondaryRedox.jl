@@ -352,6 +352,283 @@ function PB.register_methods!(rj::ReactionRedoxH2_SO4)
 end
 
 
+##################################################################################################################
+# Iron 
+###############################################################################################################
+
+"""
+    ReactionRedoxFeII_O2
+
+FeII oxidation by oxygen, producing generic FeIIIOx (0.5 Fe2O3)
+
+    4 Fe++ + O2 + 4 H2O -> 4 FeIIIOx + 8 H+
+
+# Parameters
+$(PARS)
+
+# Methods and Variables for default Parameters
+$(METHODS_DO)
+"""
+Base.@kwdef mutable struct ReactionRedoxFeII_O2{P} <: PB.AbstractReaction
+    base::PB.ReactionBase
+
+    pars::P = PB.ParametersTuple(
+        # 
+        PB.ParDouble("R_FeII_O2", 3.65e6/1e3 , units="(mol m-3)-1 yr-1",
+            description="rate constant"),
+    )
+
+    stoich_redox_FeII_O2 = PB.RateStoich(
+        PB.VarProp("redox_FeII_O2", "mol O2 yr-1", "oxygen consumption (+ve) by Fe++ oxidation",
+                        attributes=(:calc_total=>true,)),
+        ((-1.0, "O2"), (-4.0, "FeII"), (4.0, "FeIIIOx"), (-8.0, "TAlk")), 
+        sms_prefix="", 
+        sms_suffix="_sms",
+        processname="redox",
+    )
+
+end
+
+function PB.register_methods!(rj::ReactionRedoxFeII_O2)
+
+    @info "register_methods! $(PB.fullname(rj))"
+
+    ratevar = rj.stoich_redox_FeII_O2.ratevartemplate
+    concvars = [
+        PB.VarDep("O2_conc", "mol m-3", "O2 concentration"),
+        PB.VarDep("FeII_conc", "mol m-3", "FeII concentration"),
+    ]
+    volume = PB.VarDep("volume", "m3", "box fluid volume")
+
+    PB.add_method_do!(
+        rj,
+        do_redox_rate, 
+        (
+            PB.VarList_single(ratevar),
+            PB.VarList_tuple(concvars),
+            PB.VarList_single(volume), 
+        );
+        p=Val(:R_FeII_O2), 
+        name="do_redox_FeII_O2",
+    )
+
+    PB.add_method_do!(rj, rj.stoich_redox_FeII_O2)
+
+    PB.add_method_do_totals_default!(rj)
+    PB.add_method_initialize_zero_vars_default!(rj)    
+    return nothing
+end
+
+
+"""
+    ReactionRedoxFeIII_H2S
+
+Sulphate-mediated iron reduction (of generic iron oxide FeIIIOx ~ 0.5 Fe2O3)
+
+    H2S + 8 FeIIIOx + 14 H+ -> 8 Fe++ + SO4-- + 8 H2O
+
+NB: rate constant k [units (mol m-3)^-0.5 yr-1] = 277.2 * k [units (mol l-1)^-0.5 hr-1]
+
+where van de Velde (2021) give k_SMIs = 1.98e0 (mol l-1)^-0.5 hr-1 for solid-phase FeIII
+
+# Parameters
+$(PARS)
+
+# Methods and Variables for default Parameters
+$(METHODS_DO)
+"""
+Base.@kwdef mutable struct ReactionRedoxFeIII_H2S{P} <: PB.AbstractReaction
+    base::PB.ReactionBase
+
+    pars::P = PB.ParametersTuple(
+       
+        PB.ParDouble("R_FeIII_H2S", 277.2*1.98e0 , units="(mol m-3)^-0.5 yr-1",
+            description="rate constant"),
+    )
+
+    stoich_redox_FeIII_H2S = PB.RateStoich(
+        PB.VarProp("redox_FeIII_H2S", "mol H2S yr-1", "sulphide consumption (+ve) by Fe+++ reduction",
+                        attributes=(:calc_total=>true,)),
+        ((-1.0, "H2S"), (-8.0, "FeIIIOx"), (8.0, "FeII"), (1.0, "SO4"), (+14.0, "TAlk")), 
+        sms_prefix="", 
+        sms_suffix="_sms",
+        processname="redox",
+    )
+
+end
+
+function PB.register_methods!(rj::ReactionRedoxFeIII_H2S)
+
+    @info "register_methods! $(PB.fullname(rj))"
+
+    vars = [
+        rj.stoich_redox_FeIII_H2S.ratevartemplate,
+        PB.VarDep("H2S_conc", "mol m-3", "H2S concentration"),
+        PB.VarDep("FeIIIOx_conc", "mol m-3", "FeIIIOx concentration"),
+        PB.VarDep("volume", "m3", "box fluid volume"),
+    ]
+
+    PB.add_method_do!(
+        rj,
+        do_FeIII_H2S_rate, 
+        (
+            PB.VarList_namedtuple(vars),
+        );
+    )
+
+    PB.add_method_do!(rj, rj.stoich_redox_FeIII_H2S)
+
+    PB.add_method_do_totals_default!(rj)
+    PB.add_method_initialize_zero_vars_default!(rj)    
+    return nothing
+end
+
+
+function do_FeIII_H2S_rate(m::PB.ReactionMethod, pars, (vars, ), cellrange::PB.AbstractCellRange, deltat)
+   
+    rateparval = pars.R_FeIII_H2S[]
+
+    for i in cellrange.indices
+        # mol yr-1                                                        
+        vars.redox_FeIII_H2S[i] = (  rateparval                             #  (mol m-3)^-0.5 yr-1 
+                        * sqrt(max(PB.get_total(vars.H2S_conc[i]), 0.0))    #   (mol m-3)^0.5
+                        * max(PB.get_total(vars.FeIIIOx_conc[i]), 0.0)       #   mol m-3  
+                        * vars.volume[i])                                         #   m3
+    end
+   
+    return nothing
+end
+
+
+"""
+    ReactionRedoxFeS_O2
+
+FeS oxidation
+
+    FeS + 2 O2 -> Fe++ + SO4--
+
+# Parameters
+$(PARS)
+
+# Methods and Variables for default Parameters
+$(METHODS_DO)
+"""
+Base.@kwdef mutable struct ReactionRedoxFeS_O2{P} <: PB.AbstractReaction
+    base::PB.ReactionBase
+
+    pars::P = PB.ParametersTuple(
+        PB.ParDouble("R_FeS_O2", 1e5*1e-3 , units="(mol m-3)-1 yr-1",
+            description="rate constant"),
+    )
+
+    stoich_redox_FeS_O2 = PB.RateStoich(
+        PB.VarProp("redox_FeS_O2", "mol FeS yr-1", "FeS consumption (+ve) by oxidation by O2",
+                        attributes=(:calc_total=>true,)),
+        ((-1.0, "FeS"), (-2.0, "O2"), (1.0, "FeII"), (1.0, "SO4"),), 
+        sms_prefix="", 
+        sms_suffix="_sms",
+        processname="redox",
+    )
+
+end
+
+function PB.register_methods!(rj::ReactionRedoxFeS_O2)
+
+    @info "register_methods! $(PB.fullname(rj))"
+
+    ratevar = rj.stoich_redox_FeS_O2.ratevartemplate
+    concvars = [
+        PB.VarDep("FeS_conc", "mol m-3", "FeS concentration"),
+        PB.VarDep("O2_conc", "mol m-3", "O2 concentration"),
+    ]
+    volume = PB.VarDep("volume", "m3", "box fluid volume")
+
+    PB.add_method_do!(
+        rj,
+        do_redox_rate, 
+        (
+            PB.VarList_single(ratevar),
+            PB.VarList_tuple(concvars),
+            PB.VarList_single(volume), 
+        );
+        p=Val(:R_FeS_O2), 
+        name="do_redox_FeS_O2",
+    )
+
+    PB.add_method_do!(rj, rj.stoich_redox_FeS_O2)
+
+    PB.add_method_do_totals_default!(rj)
+    PB.add_method_initialize_zero_vars_default!(rj)    
+    return nothing
+end
+
+
+"""
+    ReactionRedoxFeS2pyr_O2
+
+Pyrite oxidation
+
+    FeS2 + 3.5 O2 + H2O -> Fe++ + 2 SO4-- + 2 H+
+
+# Parameters
+$(PARS)
+
+# Methods and Variables for default Parameters
+$(METHODS_DO)
+"""
+Base.@kwdef mutable struct ReactionRedoxFeS2pyr_O2{P} <: PB.AbstractReaction
+    base::PB.ReactionBase
+
+    pars::P = PB.ParametersTuple(
+        PB.ParDouble("R_FeS2pyr_O2", 1e3*1e-3 , units="(mol m-3)-1 yr-1",
+            description="rate constant"),
+    )
+
+    stoich_redox_FeS2pyr_O2 = PB.RateStoich(
+        PB.VarProp("redox_FeS2pyr_O2", "mol FeS2pyr yr-1", "pyrite consumption (+ve) by oxidation by O2",
+                        attributes=(:calc_total=>true,)),
+        ((-1.0, "FeS2pyr"), (-3.5, "O2"), (1.0, "FeII"), (2.0, "SO4"), (-2.0, "TAlk")), 
+        sms_prefix="", 
+        sms_suffix="_sms",
+        processname="redox",
+    )
+
+end
+
+function PB.register_methods!(rj::ReactionRedoxFeS2pyr_O2)
+
+    @info "register_methods! $(PB.fullname(rj))"
+
+    ratevar = rj.stoich_redox_FeS2pyr_O2.ratevartemplate
+    concvars = [
+        PB.VarDep("FeS2pyr_conc", "mol m-3", "FeS2pyr (pyrite) concentration"),
+        PB.VarDep("O2_conc", "mol m-3", "O2 concentration"),
+    ]
+    volume = PB.VarDep("volume", "m3", "box fluid volume")
+
+    PB.add_method_do!(
+        rj,
+        do_redox_rate, 
+        (
+            PB.VarList_single(ratevar),
+            PB.VarList_tuple(concvars),
+            PB.VarList_single(volume), 
+        );
+        p=Val(:R_FeS2pyr_O2), 
+        name="do_redox_FeS2pyr_O2",
+    )
+
+    PB.add_method_do!(rj, rj.stoich_redox_FeS2pyr_O2)
+
+    PB.add_method_do_totals_default!(rj)
+    PB.add_method_initialize_zero_vars_default!(rj)    
+    return nothing
+end
+
+
+######################################################################################################################
+# generic functions
+######################################################################################################################
 
 # calculate generic first-order rate for two concentration defined by concvars[1:2]
 function do_redox_rate(m::PB.ReactionMethod, pars, (ratevar, concvars, volume), cellrange::PB.AbstractCellRange, deltat)

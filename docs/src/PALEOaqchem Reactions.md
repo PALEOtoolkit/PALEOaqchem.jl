@@ -23,6 +23,17 @@ Remin.ReactionReminO2_SO4_CH4
 SecondaryRedox.ReactionRedoxH2S_O2
 SecondaryRedox.ReactionRedoxCH4_O2
 SecondaryRedox.ReactionRedoxCH4_SO4
+SecondaryRedox.ReactionRedoxFeII_O2
+SecondaryRedox.ReactionRedoxFeIII_H2S
+SecondaryRedox.ReactionRedoxFeS_O2
+SecondaryRedox.ReactionRedoxFeS2pyr_O2
+```
+
+## Iron-sulphur system
+```@docs
+FeS.ReactionFeSaq
+FeS.ReactionFeSm
+FeS.ReactionPyrH2S
 ```
 
 ## Carbonate chemistry
