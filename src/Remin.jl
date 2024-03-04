@@ -20,18 +20,20 @@ const default_reminOrgOxO2 = PB.RateStoich(
 const default_reminOrgOxFeIIIOx = PB.RateStoich(
     PB.VarProp("reminOrgOxFeIIIOx", "mol O2eq yr-1", "oxygen consumption (-ve) by remineralization",
         attributes=(:calc_total=>true,)),
-    ((4.0, "FeIIIOx"), (-4.0, "FeII"), (8.0, "TAlk")),
+    ((4.0, "FeIIIOx"), (-4.0, "FeII"), (-8.0, "TAlk")), # NB: stoichiometry is *-1
     sms_prefix="soluteflux_", 
     sms_suffix="",
     processname="remin",
 )
 
 "Stoichiometry and fractionation for organic matter oxidation by SO4.
- NB: normalized to O2eq"
+ NB: normalized to O2eq
+    0.5 SO4-- + H+ -> 0.5 H2S [+O2]
+ "
 const default_reminOrgOxSO4 = PB.RateStoich(
     PB.VarProp("reminOrgOxSO4", "mol O2eq yr-1", "2 * sulphate consumption (-ve) by remineralization",
         attributes=(:calc_total=>true,)),
-    ((0.5, "SO4::Isotope"), (-0.5, "H2S::Isotope"), (-1.0, "TAlk")),
+    ((0.5, "SO4::Isotope"), (-0.5, "H2S::Isotope"), (-1.0, "TAlk")), # NB: stoichiometry is *-1
     deltavarname_eta = ("SO4_delta", -35.0),   # constant fractionation 35 per mil
     sms_prefix="soluteflux_",
     sms_suffix="",
