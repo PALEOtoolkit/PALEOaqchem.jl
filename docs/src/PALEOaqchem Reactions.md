@@ -38,6 +38,17 @@ FeS.ReactionFeSm
 FeS.ReactionPyrH2S
 ```
 
+## Co-precipitation
+```@docs
+CoPrecip.ReactionPACoPrecip
+CoPrecip.ReactionPARelease
+```
+
+## Phosphorus
+```@docs
+CFA.ReactionCFAsimple
+```
+
 ## Carbonate chemistry
 ```@docs
 CarbChem.ReactionCO2SYS

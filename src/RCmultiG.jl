@@ -276,7 +276,7 @@ function do_RCmultiG_POC_decay(m::PB.ReactionMethod, pars, (decay_flux, state_va
     for (state_v, sms_v, k_bin) in PB.IteratorUtils.zipstrict(state_vars, sms_vars, rj.k_bin)
         for i in cellrange.indices
             # for numerical stability, set rate to zero for -ve values
-            # (multiply by 0 or 1 instead of using a conditional test so AD sparsity detection always sees a dependency on state_v)
+            # (multiply by 0 or 1 instead of using a conditional test so that AD sparsity detection always sees a dependency on state_v)
             above_threshold = (PB.get_total(state_v[i]) > 0.0)
             # mol yr-1 =   mol        yr-1
             df = above_threshold*state_v[i] * k_bin
