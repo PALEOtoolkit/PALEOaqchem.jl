@@ -39,6 +39,19 @@ See:
 - Lenton and Daines (2017) Ann. Rev. Mar. Sci. https://dx.doi.org/10.1146/annurev-marine-010816-060521
 - van de Velde etal (2021) GMD https://10.5194/gmd-14-2713-2021
 
+TODO currently uses a constant value for `K_H2S`.
+To read out `K_H2S` from PALEOcarbchem (Hofmann (2010) Aquatic Geochemistry https://10.1007/s10498-009-9084-1):
+
+    import PALEOaqchem.PALEOcarbchem
+    comps, concinputs = PALEOcarbchem.get_components_inputs(["H2S"]);
+    options = (; WhichKs=Val(10), WhoseKSO4=Val(1), pHScale=Val(3), Components=comps); # free pH scale
+    C = zeros(length(PALEOaqchem.PALEOcarbchem.ConstNames));
+    TdegC, Pdbar, sal = 15.0, 100.0, 35.0 # set temperature (C), pressure (dbar), salinity (psu)
+    PALEOcarbchem.calc_constants!(C, TdegC, Pdbar, sal, Options=options);  # temperature, pressure corrected 
+    C_NT = NamedTuple{PALEOcarbchem.ConstNames}(C);
+    C_NT.KH2S                  # mol kg-1
+    1.8139882158241377e-7
+
 # Parameters
 $(PARS)
 
@@ -50,26 +63,19 @@ Base.@kwdef mutable struct ReactionFeSaq{P} <: PB.AbstractReaction
 
     pars::P = PB.ParametersTuple(
 
-        PB.ParDouble("K_H2S", 2.15e-7 , units="mol kg-1",
+        PB.ParDouble("K_H2S", 1.814e-7 , units="mol kg-1",
             description="K_H2S = [H+][HS-]/[H2S]  units mol kg-1 eqb const for H2S <--> HS- + H+ (Hofmann (2010) Aquatic Geochemistry https://10.1007/s10498-009-9084-1)"),
         PB.ParDouble("K2_FeSaq", 10.0^2.2 , units="",
             description="K2_FeSaq = {Fe++}[HS-]/([FeSaq][H+]) eqb constant for FeSaq + H+ <--> Fe++ + HS- (Rickard (2006) eq 8)"),
         PB.ParDouble("activity_Fe2p", 0.23, units="",
-            description="Fe++ activity (eg van de Velde 2012 Table 3 from Davies eqn)")
-
+            description="Fe++ activity (eg van de Velde 2012 Table 3 from Davies eqn)"),
+        PB.ParBool("add_TAlk_calc", false,
+            description="true to add HS- contribution to alkalinity (and a very small correction from FeSaq) to TAlk_calc variable"),
     )
 
 
 end
 
-
-# K_H2S from Hofmann (2010) Aquatic Geochemistry https://10.1007/s10498-009-9084-1
-# Sal = 35
-# TempK = 273.15 + 15
-# lnKH2S= (225.838 + 0.3449*sqrt(Sal) - 0.0274*Sal) - 13275.3/TempK - 34.6435*log(TempK)
-# -15.35415072896447
-# exp(lnKH2S)
-# 2.146728213653719e-7 # mol kg-1
 
 function PB.register_methods!(rj::ReactionFeSaq)
 
@@ -94,6 +100,13 @@ function PB.register_methods!(rj::ReactionFeSaq)
             PB.VarProp("FeSaq_conc", "mol m-3", "aqueous FeS concentration"),            
         ]
     )
+
+    if rj.pars.add_TAlk_calc[]
+        push!(vars_FeSaq_eqb,
+            PB.VarDep("volume", "m3", "cell solute volume"),
+            PB.VarContrib("TAlk_calc", "mol", "calculated TAlk"),
+        )
+    end
 
     PB.add_method_setup!(
         rj, 
@@ -160,7 +173,13 @@ function do_FeSaq_eqb(m::PB.ReactionMethod, pars, (vars,), cellrange::PB.Abstrac
         vars.SmIIaqtot_constraint[i] = vars.SmIIaqtot_conc[i] - (vars.H2Stot_conc[i] + vars.FeSaq_conc[i])
 
         # FeII budget constraint for DAE solver
-        vars.FeIIaqtot_constraint[i] = vars.FeIIaqtot_conc[i] - (vars.FeII_conc[i] + vars.FeSaq_conc[i])       
+        vars.FeIIaqtot_constraint[i] = vars.FeIIaqtot_conc[i] - (vars.FeII_conc[i] + vars.FeSaq_conc[i])
+
+        # S-II contribution to TAlk constraint + a very small correction from FeSaq
+        if pars.add_TAlk_calc[]
+            # each FeSaq removes 1 Fe2++ (hence reduces "actual" TAlk = cations - anions by 2, equivalent to increase TAlk_calc by 2)
+            vars.TAlk_calc[i] += (2*vars.FeSaq_conc[i] + vars.HSm_conc[i])*vars.volume[i]
+        end
     end
    
     return nothing
@@ -204,7 +223,7 @@ Base.@kwdef mutable struct ReactionFeSm{P} <: PB.AbstractReaction
     stoich_FeS_precdiss = PB.RateStoich(
         PB.VarProp("rate_FeSm", "mol yr-1", "FeSm precipitation - dissolution rate"; 
             attributes=(:calc_total=>true,)),
-        ((-1.0, "SmIIaqtot"), (-1.0, "FeIIaqtot"), (1.0, "FeSm"), ), 
+        ((-1.0, "SmIIaqtot"), (-1.0, "FeIIaqtot"), (1.0, "FeSm"), (-2.0, "TAlk")), # TAlk from FeIIaqtot consumption
         sms_prefix="", 
         sms_suffix="_sms",
         processname="mineral",

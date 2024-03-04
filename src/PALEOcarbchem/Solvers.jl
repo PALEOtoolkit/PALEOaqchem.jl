@@ -31,15 +31,47 @@ Get human-readable description of `resultName`
 """
 function getResultDescription(resultName::AbstractString)
     ResultDescriptions = (
-        ("pCO2",        "atm",      "CO2 partial pressure"),
-        ("xCO2dryinp",  "",         "mixing ratio of CO2 in dry air at 1 atm (always > pCO2 due to H2O vapour pressure)"),
+        # water
+        ("H",           "mol kg-1", "Hydrogen ion (free) concentration"),
+        ("OH",          "mol kg-1", "Hydroxyl ion concentration"),
+        # sulphate
+        ("TS",          "mol kg-1", "Sulphate total concentration"),
+        ("HSO4",          "mol kg-1", "HSO4- concentration"),
+        # fluoride
+        ("TF",          "mol kg-1", "Fluoride total concentration"),
+        ("HF",          "mol kg-1", "Fluoride HF concentration"),
+        # carbon
+        ("TCi",         "mol kg-1", "DIC total concentration"),
         ("CO2",         "mol kg-1", "CO2 concentration"),
-        ("HCO3",        "mol kg-1", "bicarbonate ion concentration"),
-        ("CO3",         "mol kg-1", "carbonate ion concentration"),
+        ("HCO3",        "mol kg-1", "bicarbonate ion HCO3- concentration"),
+        ("CO3",         "mol kg-1", "carbonate ion CO3-- concentration"),
+        ("CAlk",        "mol kg-1", "carbon contribution to total alkalinity (HCO3 + 2*CO3)"),
+        ("fCO2",        "atm",      "CO2 fugacity"),
+        ("pCO2",        "atm",      "CO2 partial pressure (fugacity corrected)"),
+        ("xCO2dryinp",  "",         "mixing ratio of CO2 in dry air at 1 atm (always > pCO2 due to H2O vapour pressure)"),
+        # boron
+        ("TB",          "mol kg-1", "Boron total concentration"),
+        ("BAlk",        "mol kg-1", "Boron B(OH)_4^- concentration (= boron contribution to total alkalinity)"),
+        # phosphorus
+        ("TP",          "mol kg-1", "Phosphate total concentration"),
+        ("H3PO4",       "mol kg-1", "Phosphate H3PO4 concentration"),
+        ("H2PO4",       "mol kg-1", "Phosphate H2PO4- concentration"),
+        ("HPO4",        "mol kg-1", "Phosphate HPO4-- concentration"),
+        ("PO4",         "mol kg-1", "Phosphate PO4--- concentration"),
+        ("PAlk",        "mol kg-1", "Phosphate contribution to total alkalinity (-H3PO4 + HPO4 + 2*PO4)"),
+        # silica
+        ("TSi",         "mol kg-1", "Silicate total concentration"),
+        ("SiAlk",       "mol kg-1", "Silicate H3SO4- concentration (= silicate contribution to total alkalinity)"),
+        # sulphide
+        ("TH2S",        "mol kg-1", "Sulphide total concentration"),
+        ("HSAlk",       "mol kg-1", "Sulphide HS- concentration (= sulphide contribution to total alkalinity)"),
+        # ammonia
+        ("TNH3",        "mol kg-1", "Ammonia + ammonium total concentration (NH3 + NH_4^+)"),
+        ("NH3Alk",      "mol kg-1", "Ammonia NH3 concentration (= ammonia contribution to total alkalinity)"),
+        # calcium and carbonate saturation
+        ("Ca",          "mol kg-1", "Ca concentration"),
         ("OmegaCA",     "",         "calcite saturation"),
         ("OmegaAR",     "",         "aragonite saturation"),
-        ("TB",         "mol kg-1", "Boron total concentration"),
-        ("BAlk",        "mol kg-1", "Boron B(OH)_4^- concentration"),
     )
 
     for resultdesc in ResultDescriptions

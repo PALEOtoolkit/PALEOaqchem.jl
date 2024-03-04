@@ -43,7 +43,10 @@ Base.@kwdef mutable struct ReactionCO2SYS{P} <: PB.AbstractReaction
         # PB.ParStringVec("output_consts", String[], 
         #     description="PALEOcarbchem eqb constants etc to include as output variables"),
 
-        PB.ParStringVec("outputs", ["pCO2", "xCO2dryinp"], 
+        PB.ParStringVec("outputs", ["pCO2", "xCO2dryinp"],
+            allowed_values=["H", "OH", "TS", "HSO4", "TF", "HF", "TCi", "CO2", "HCO3", "CO3", "CAlk", "fCO2", "pCO2", "xCO2dryinp",
+                "TB", "BAlk", "TP", "H3PO4", "H2PO4", "HPO4", "PO4", "PAlk", "TSi", "SiAlk", "TH2S", "HSAlk", "TNH3", "NH3Alk",
+                "Ca", "OmegaCA", "OmegaAR"], # needs to match PALEOcarbchem.ResultNames
             description="PALEOcarbchem output concentrations etc to include as output variables"),
 
         PB.ParBool("output_pHtot", true, 
