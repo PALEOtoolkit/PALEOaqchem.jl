@@ -50,6 +50,10 @@ include("RCmultiG.jl")
 
 include("Boron.jl")
 
+include("CoPrecip.jl")
+
+include("CFA.jl")
+
 include("MolecularDiffusion.jl")
 
 end # module PALEOaqchem

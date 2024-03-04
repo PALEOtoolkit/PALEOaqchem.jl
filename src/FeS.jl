@@ -34,13 +34,13 @@ constraint on total [FeII]  | FeIIaqtot_constraint    | Constraint
 (usually SmIIaqtot and FeIIaqtot are ODE variables and should be defined by ReactionReservoir)
 
 See:
-- Rickard (2006) GCA https://10.1016/j.gca.2006.02.029
-- Rickard and Luther (2007) Chemical Reviews https://dx.doi.org/10.1021/cr0503658
-- Lenton and Daines (2017) Ann. Rev. Mar. Sci. https://dx.doi.org/10.1146/annurev-marine-010816-060521
-- van de Velde etal (2021) GMD https://10.5194/gmd-14-2713-2021
+- Rickard (2006) GCA <https://dx.doi.org10.1016/j.gca.2006.02.029>
+- Rickard and Luther (2007) Chemical Reviews <https://dx.doi.org/10.1021/cr0503658>
+- Lenton and Daines (2017) Ann. Rev. Mar. Sci. <https://dx.doi.org/10.1146/annurev-marine-010816-060521>
+- van de Velde etal (2021) GMD <https://dx.doi.org/10.5194/gmd-14-2713-2021>
 
 TODO currently uses a constant value for `K_H2S`.
-To read out `K_H2S` from PALEOcarbchem (Hofmann (2010) Aquatic Geochemistry https://10.1007/s10498-009-9084-1):
+To read out `K_H2S` from PALEOcarbchem (Hofmann (2010) Aquatic Geochemistry <https://dx.doi.org.10.1007/s10498-009-9084-1>):
 
     import PALEOaqchem.PALEOcarbchem
     comps, concinputs = PALEOcarbchem.get_components_inputs(["H2S"]);
@@ -64,7 +64,7 @@ Base.@kwdef mutable struct ReactionFeSaq{P} <: PB.AbstractReaction
     pars::P = PB.ParametersTuple(
 
         PB.ParDouble("K_H2S", 1.814e-7 , units="mol kg-1",
-            description="K_H2S = [H+][HS-]/[H2S]  units mol kg-1 eqb const for H2S <--> HS- + H+ (Hofmann (2010) Aquatic Geochemistry https://10.1007/s10498-009-9084-1)"),
+            description="K_H2S = [H+][HS-]/[H2S]  units mol kg-1 eqb const for H2S <--> HS- + H+"),
         PB.ParDouble("K2_FeSaq", 10.0^2.2 , units="",
             description="K2_FeSaq = {Fe++}[HS-]/([FeSaq][H+]) eqb constant for FeSaq + H+ <--> Fe++ + HS- (Rickard (2006) eq 8)"),
         PB.ParDouble("activity_Fe2p", 0.23, units="",
@@ -72,7 +72,6 @@ Base.@kwdef mutable struct ReactionFeSaq{P} <: PB.AbstractReaction
         PB.ParBool("add_TAlk_calc", false,
             description="true to add HS- contribution to alkalinity (and a very small correction from FeSaq) to TAlk_calc variable"),
     )
-
 
 end
 
@@ -198,9 +197,9 @@ Represents
 as a fast precipitation-dissolution reaction, using the formulation from Van Cappellen & Wang (1996)
 
 See:
-- Van Cappellen & Wang (1996) AJS https://dx.doi.org/10.2475/ajs.296.3.197
-- Rickard (2006) GCA https://dx.doi.org/10.1016/j.gca.2006.02.029
-- Rickard and Luther (2007) Chemical Reviews https://dx.doi.org/10.1021/cr0503658
+- Van Cappellen & Wang (1996) AJS <https://dx.doi.org/10.2475/ajs.296.3.197>
+- Rickard (2006) GCA <https://dx.doi.org/10.1016/j.gca.2006.02.029>
+- Rickard and Luther (2007) Chemical Reviews <https://dx.doi.org/10.1021/cr0503658>
 
 # Parameters
 $(PARS)
