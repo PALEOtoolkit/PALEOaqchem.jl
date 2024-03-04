@@ -8,6 +8,7 @@ CurrentModule = PALEOaqchem
 ```@docs
 Particle.ReactionParticleDecay
 Particle.ReactionFluxToComponents
+RCmultiG.ReactionRCmultiG
 ```
 
 ## Remin
@@ -16,6 +17,7 @@ Remin.ReactionReminPonly
 Remin.ReactionReminO2
 Remin.ReactionReminO2_SO4
 Remin.ReactionReminO2_SO4_CH4
+Remin.ReactionReminO2_Fe_SO4_CH4
 ```
 
 ## Secondary redox

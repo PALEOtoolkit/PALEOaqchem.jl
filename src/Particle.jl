@@ -28,6 +28,9 @@ Base.@kwdef mutable struct ReactionParticleDecay{P} <: PB.AbstractReaction
         PB.ParDouble("decay_threshold", -Inf, units="mol m-3",
             description="particle decay concentration below which decay stops"),
 
+        PB.ParBool("show_decayrate", false,
+            description="true to create a 'decayrate' variable to record decay rate"),
+
         PB.ParType(PB.AbstractData, "field_data", PB.ScalarData,
             allowed_values=PB.IsotopeTypes,
             description="disable / enable isotopes and specify isotope type"),
@@ -47,8 +50,13 @@ function PB.register_methods!(rj::ReactionParticleDecay)
         PB.VarContrib("decayflux",     "mol yr-1", "Particle decay flux", attributes=(:field_data=>rj.pars.field_data[],)),
     ]
     if rj.pars.decay_threshold[] > -Inf
-        push!(vars, PB.VarDep(    "Particle_conc", "mol m-3", "Particle concentration"),)
+        push!(vars, PB.VarDep("Particle_conc", "mol m-3", "Particle concentration"),)
     end
+    PB.setfrozen!(rj.pars.decay_threshold)
+    if rj.pars.show_decayrate[]
+        push!(vars, PB.VarProp("decayrate", "mol yr-1", "Particle decay flux"),)
+    end
+    PB.setfrozen!(rj.pars.show_decayrate)
 
     PB.add_method_do!(rj, do_particle_decay, (PB.VarList_namedtuple(vars),))
 
@@ -66,6 +74,9 @@ function do_particle_decay(m::PB.ReactionMethod, pars, (vars,), cellrange::PB.Ab
         decayflux = above_threshold*vars.Particle[i]/pars.decay_timescale[]
         vars.Particle_sms[i] -= decayflux
         vars.decayflux[i] += decayflux
+        if pars.show_decayrate[]
+            vars.decayrate[i] = decayflux
+        end
     end
 
     return nothing

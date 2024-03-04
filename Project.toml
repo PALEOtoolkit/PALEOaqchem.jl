@@ -4,13 +4,18 @@ authors = ["sd336 "]
 version = "0.3.5"
 
 [deps]
+Infiltrator = "5903a43b-9cc3-4c30-8d17-598619ec4e9b"
 PALEOboxes = "804b410e-d900-4b2a-9ecd-f5a06d4c1fd4"
+Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 SIMD = "fdea26ae-647d-5447-a871-4b548cad5224"
+SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
 TestEnv = "1e6cf692-eddd-4d53-88a5-2d735e33781b"
 
 [compat]
 PALEOboxes = "0.21"
+Infiltrator = "1"
 SIMD = "3.4"
+SpecialFunctions = "1, 2"
 TestEnv = "1"
 julia = "1.6"
 
@@ -18,10 +23,10 @@ julia = "1.6"
 BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 Logging = "56ddb016-857b-54e1-b83d-db4d58db5568"
-Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 OrdinaryDiffEq = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"
 PALEOmodel = "bf7b4fbe-ccb1-42c5-83c2-e6e9378b660c"
 PALEOocean = "41de04b1-2efd-44ae-92ae-39d71a4fd99b"
+Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
 SLEEF_jll = "63e82ce6-3d80-5af4-a84c-484b71ab98bb"
 Sundials = "c3572dad-4567-51f8-b174-8c6c989267f4"
