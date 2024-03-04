@@ -46,6 +46,8 @@ include("FeS.jl")
 
 include("Particle.jl")
 
+include("RCmultiG.jl")
+
 include("Boron.jl")
 
 include("MolecularDiffusion.jl")
