@@ -203,15 +203,19 @@ function setup_RCmultiG(m::PB.ReactionMethod, pars, (state_vars,), cellrange::PB
         k_bin, initial_frac_bin = calc_rc_bin_fractions(pars.a[], pars.v[], pars.k_bin_edges.v)  
 
         if pars.do_RC_distribution[]
-            # bin reactivity and distribution
-            rj.k_bin, rj.initial_frac_bin = k_bin, initial_frac_bin
+            # bin reactivity and distribution          
 
             rj.num_bins == length(pars.k_dist_modifier.v) ||
                 error("$(PB.fullname(rj)) num_bins $(rj.num_bins) != length(k_dist_modifier) $(length(pars.k_dist_modifier.v))")
 
-            Printf.@printf(io, "    %20s%20s%20s%20s\n", "Variable", "k_bin", "initial_frac_bin", "k_dist_modifier")
-            for (v_sv, kb, ifb, kdm) in PB.IteratorUtils.zipstrict(v_state_vars, rj.k_bin, rj.initial_frac_bin, pars.k_dist_modifier.v)
-                Printf.@printf(io, "    %20s%20e%20g%20g\n", PB.fullname(v_sv.linkvar), kb,  ifb,  kdm)
+            modified_initial_frac_bin = [ifb*kdm for (ifb, kdm) in zip(initial_frac_bin, pars.k_dist_modifier.v)]
+            modified_initial_frac_bin /= sum(modified_initial_frac_bin) # renormalize to 1.0
+
+            rj.k_bin, rj.initial_frac_bin = k_bin, modified_initial_frac_bin
+
+            Printf.@printf(io, "    %20s%20s%20s%20s%30s\n", "Variable", "k_bin", "initial_frac_bin", "k_dist_modifier", "modified initial_frac_bin")
+            for (v_sv, kb, ifb, kdm, mifb) in PB.IteratorUtils.zipstrict(v_state_vars, rj.k_bin, initial_frac_bin, pars.k_dist_modifier.v, rj.initial_frac_bin)
+                Printf.@printf(io, "    %20s%20e%20g%20g%30g\n", PB.fullname(v_sv.linkvar), kb,  ifb,  kdm, mifb)
             end
         else
             # bin reactivity only
