@@ -38,7 +38,7 @@ Base.@kwdef mutable struct ReactionRedoxNH4_NO2{P} <: PB.AbstractReaction
     stoich_redox_NH4_NO2 = PB.RateStoich(
         PB.VarProp("redox_NH4_NO2", "mol N2 yr-1", "N2 production (+ve) by anammox",
                         attributes=(:calc_total=>true,)),
-        ((-1.0, "NH4"), (-1.0, "NO2"), (1.0, "N2"), (1.0, "TAlk")), 
+        ((-1.0, "NH4"), (-1.0, "NO2"), (1.0, "N2")), 
         sms_prefix="", 
         sms_suffix="_sms",
         processname="redox",
@@ -79,7 +79,7 @@ Base.@kwdef mutable struct ReactionRedoxNH4_O2{P} <: PB.AbstractReaction
     stoich_redox_NH4_O2 = PB.RateStoich(
         PB.VarProp("redox_NH4_O2", "mol N yr-1", "NO2 production (+ve) by aerobic oxidation of ammonia",
                         attributes=(:calc_total=>true,)),
-        ((-1.0, "NH4"), (-1.5, "O2"), (1.0, "NO2"), (-1.0, "TAlk")), 
+        ((-1.0, "NH4"), (-1.5, "O2"), (1.0, "NO2"), (-2.0, "TAlk")), 
         sms_prefix="", 
         sms_suffix="_sms",
         processname="redox",

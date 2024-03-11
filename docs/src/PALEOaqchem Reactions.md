@@ -4,10 +4,8 @@
 CurrentModule = PALEOaqchem
 ```
 
-## Particulate fluxes
+## Particulate organic carbon fluxes
 ```@docs
-Particle.ReactionParticleDecay
-Particle.ReactionFluxToComponents
 RCmultiG.ReactionRCmultiG
 ```
 
@@ -67,13 +65,6 @@ SecondaryRedox.ReactionRedoxH2_SO4
 FeS.ReactionFeSaq
 FeS.ReactionFeSm
 FeS.ReactionPyrH2S
-```
-
-
-## Co-precipitation
-```@docs
-CoPrecip.ReactionPACoPrecip
-CoPrecip.ReactionPARelease
 ```
 
 ## Phosphorus
