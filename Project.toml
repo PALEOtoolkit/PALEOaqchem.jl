@@ -1,7 +1,7 @@
 name = "PALEOaqchem"
 uuid = "673cec3b-17d1-411f-9fcd-71c01c593120"
 authors = ["sd336 "]
-version = "0.3.8"
+version = "0.3.9"
 
 [deps]
 Infiltrator = "5903a43b-9cc3-4c30-8d17-598619ec4e9b"
