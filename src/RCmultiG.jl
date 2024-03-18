@@ -49,6 +49,8 @@ Base.@kwdef mutable struct ReactionRCmultiG{P} <: PB.AbstractReaction
             description="reactive-continuum model average lifetime"),
         PB.ParDouble("v", 0.125, units="",
             description="reactive-continuum model shape parameter"),
+        PB.ParBool("oxidant_dependent_rate", false,
+            description="true to scale decomposition rates by factor 'freminOrgTot'"),
 
         PB.ParType(PB.AbstractData, "field_data", PB.ScalarData,
             allowed_values=PB.IsotopeTypes,
@@ -168,14 +170,20 @@ function PB.register_methods!(rj::ReactionRCmultiG)
     end
     PB.setfrozen!(rj.pars.do_RC_distribution)
 
+    decay_vars = PB.VariableReaction[
+        PB.VarContrib("POC_decay", "mol C yr-1", "decay flux";
+                    attributes=(:field_data=>rj.pars.field_data[], )),
+    ]
+    if rj.pars.oxidant_dependent_rate[]
+        push!(decay_vars, PB.VarDep("freminOrgTot", "", "overall oxidant-dependent scaling factor for remineralization rate"))
+    end
+    PB.setfrozen!(rj.pars.oxidant_dependent_rate)
+
     PB.add_method_do!(
         rj,
         do_RCmultiG_POC_decay, 
         (
-            PB.VarList_single(
-                PB.VarContrib("POC_decay", "mol C yr-1", "decay flux";
-                    attributes=(:field_data=>rj.pars.field_data[], )),
-            ),
+            PB.VarList_namedtuple(decay_vars),
             PB.VarList_vector(state_vars),
             PB.VarList_vector(sms_vars),
         );
@@ -273,7 +281,7 @@ function do_RCmultiG_distribute_input_flux(m::PB.ReactionMethod, pars, (sms_inpu
     return nothing
 end
 
-function do_RCmultiG_POC_decay(m::PB.ReactionMethod, pars, (decay_flux, state_vars, sms_vars), cellrange::PB.AbstractCellRange, deltat)
+function do_RCmultiG_POC_decay(m::PB.ReactionMethod, pars, (vars, state_vars, sms_vars), cellrange::PB.AbstractCellRange, deltat)
     rj = m.reaction
 
     # first-order POC decay
@@ -284,8 +292,11 @@ function do_RCmultiG_POC_decay(m::PB.ReactionMethod, pars, (decay_flux, state_va
             above_threshold = (PB.get_total(state_v[i]) > 0.0)
             # mol yr-1 =   mol        yr-1
             df = above_threshold*state_v[i] * k_bin
+            if pars.oxidant_dependent_rate[]
+                df *= vars.freminOrgTot[i]
+            end
             sms_v[i] -= df
-            decay_flux[i] += df
+            vars.POC_decay[i] += df
         end
     end
    

@@ -37,16 +37,65 @@ function O2AlkUptakeRemin(Corg, (NO3, TNH3, Ngas), TPO4, Ccarb; rO2Corg=1)
     return (O2, Alk)
 end
 
+"""
+    parse_number_name(nname::AbstractString) -> (number, name)
+
+Parse a string of form "-1*A"
+
+"""
+function parse_number_name(nname::AbstractString; sep=['*', ' '], number_first=true)
+
+    # parse multiplier
+    svmn = split(nname, sep, keepempty=false)
+    if length(svmn) == 1
+        mult, name = 1, svmn[1]
+    elseif length(svmn) == 2
+        if !number_first
+            tmp = svmn[1]
+            svmn[1] = svmn[2]
+            svmn[2] = tmp
+        end
+        mult = tryparse(Int64, svmn[1])
+        if isnothing(mult)
+            mult = tryparse(Float64, svmn[1])
+        end
+        name = svmn[2]
+    end
+
+    !isnothing(mult) || 
+        error("invalid field in nname, not of form number*name: ", nname)
+  
+    return (mult, name)
+end
+
+parse_name_to_power_number(nname::AbstractString) = parse_number_name(nname; sep=['^', ' '], number_first=false)
+
+const _R_conc_attributes_base = (
+    # :field_data=>rj.pars.field_data[],
+    :totalnames=>String[],
+    # :advect=>false,
+    :vertical_movement=>0.0,
+    :specific_light_extinction=>0.0,
+    :vphase=>PB.VP_Undefined,
+    :diffusivity_speciesname=>"",
+    :gamma=>missing,
+)
+
+const R_conc_attributes_advectfalse = (_R_conc_attributes_base..., :advect=>false,)
+const R_conc_attributes_advecttrue = (_R_conc_attributes_base..., :advect=>true,)
+
 
 include("PALEOcarbchem/PALEOcarbchem.jl") # PALEOcarbchem module
+
+include("Reservoirs.jl")
+
+include("GenericReactions.jl")
 
 include("CarbChem.jl")
 
 include("Remin.jl")
 
 include("SecondaryRedox.jl")
-
-include("FeS.jl")
 
 include("Particle.jl")
 
@@ -59,5 +108,7 @@ include("CoPrecip.jl")
 include("CFA.jl")
 
 include("MolecularDiffusion.jl")
+
+include("FeS_deprecated.jl")
 
 end # module PALEOaqchem

@@ -20,6 +20,7 @@ makedocs(;
         # ],
         # no HOWTO docs yes
         "Reference" => [
+            "PALEOaqchem Generic Reactions.md",
             "PALEOaqchem Reactions.md",
             "PALEOaqchem functions.md",
             "PALEOcarbchem.md",
