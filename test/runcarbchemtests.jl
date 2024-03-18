@@ -51,11 +51,9 @@ end
 
 !("Ocean 3 box carb chem Hfree DAE" in skipped_testsets) && @testset "Ocean 3 box carb chem Hfree DAE" begin
 
-    modelpars=Dict("solve_pH"=>"constraint")
     model = PB.create_model_from_config(
         configfile, 
-        "test_carbchem"; 
-        modelpars
+        "test_carbchem_constraint"; 
     )
 
     # add pH, TAlk to state variables and apply constraint on TAlk      
@@ -103,11 +101,9 @@ end
 
 !("Ocean 3 box carb chem Hfree implicit" in skipped_testsets) && @testset "Ocean 3 box carb chem Hfree implicit" begin
 
-    modelpars=Dict("solve_pH"=>"implicit", "TAlkstateexplicit"=>false)
     model = PB.create_model_from_config(
         configfile, 
-        "test_carbchem";
-        modelpars
+        "test_carbchem_implicit";
     )
 
     initial_state, modeldata = PALEOmodel.initialize!(model)

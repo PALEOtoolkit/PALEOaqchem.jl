@@ -12,8 +12,8 @@ const ResultNames = (
     :TB, :BAlk,
     :TP, :H3PO4, :H2PO4, :HPO4, :PO4, :PengCorrection, :PAlk,
     :TSi, :SiAlk,
-    :TH2S, :HSAlk,
-    :TNH3, :NH3Alk,
+    :TH2S, :H2S, :HSAlk,
+    :TNH3, :NH4, :NH3Alk,
     :Ca, :OmegaCA, :OmegaAR
 )
 
@@ -64,9 +64,11 @@ function getResultDescription(resultName::AbstractString)
         ("SiAlk",       "mol kg-1", "Silicate H3SO4- concentration (= silicate contribution to total alkalinity)"),
         # sulphide
         ("TH2S",        "mol kg-1", "Sulphide total concentration"),
+        ("H2S",         "mol kg-1", "Sulphide H2S species concentration"),
         ("HSAlk",       "mol kg-1", "Sulphide HS- concentration (= sulphide contribution to total alkalinity)"),
         # ammonia
         ("TNH3",        "mol kg-1", "Ammonia + ammonium total concentration (NH3 + NH_4^+)"),
+        ("NH4",         "mol kg-1", "Ammonium NH4- concentration"),
         ("NH3Alk",      "mol kg-1", "Ammonia NH3 concentration (= ammonia contribution to total alkalinity)"),
         # calcium and carbonate saturation
         ("Ca",          "mol kg-1", "Ca concentration"),
@@ -239,24 +241,26 @@ function calculateTAfromTCpHfree!(
     if Options.Components.H2S == Val(true)
         TH2S = concs.TH2S[]
         HSAlk     = TH2S*C[CI.KH2S]/(C[CI.KH2S] + H)
+        H2S       = TH2S - HSAlk
         TA       += HSAlk
         if do_dTAdpH == Val(true)
             dHSAlkdH = - HSAlk/(C[CI.KH2S] + H);
             dTAdH   += dHSAlkdH
         end
-        r[RI.TH2S]=TH2S; r[RI.HSAlk]=HSAlk
+        r[RI.TH2S]=TH2S; r[RI.HSAlk]=HSAlk; r[RI.H2S]=H2S
     end 
 
     # Ammonia
     if Options.Components.NH3 == Val(true)
         TNH3      = concs.TNH3[]
         NH3Alk    = TNH3*C[CI.KNH3]/(C[CI.KNH3] + H)
+        NH4       = TNH3 - NH3Alk
         TA        += NH3Alk
         if do_dTAdpH == Val(true)
             dNH3AlkdH = - NH3Alk/(C[CI.KNH3] + H)
             dTAdH   += dNH3AlkdH
         end
-        r[RI.TNH3]=TNH3; r[RI.NH3Alk]=NH3Alk
+        r[RI.TNH3]=TNH3; r[RI.NH3Alk]=NH3Alk; r[RI.NH4]=NH4
     end
 
     # Carbonate saturation (not a contribution to alkalinity !)

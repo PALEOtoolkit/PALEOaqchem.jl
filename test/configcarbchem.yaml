@@ -3,16 +3,7 @@
 test_carbchem:
     parameters:
         CIsotope: IsotopeLinear
-        # Two parameters to define the solution method for pH/TAlk
-        # Option 1: add pH, TAlk to state variables and solve for pH
-        solve_pH: solve
-        TAlkstateexplicit: true
-        # Option 2: add pH, TAlk to state variables and apply constraint on TAlk      
-        # solve_pH: constraint
-        # TAlkstateexplicit: true
-        # Option 3: TAlk(pH) is an implicit variable, pH is a state variable
-        # solve_pH: implicit
-        # TAlkstateexplicit: false
+
     domains:
         global:
                         
@@ -51,8 +42,7 @@ test_carbchem:
 
                 reservoir_TAlk:
                     class: ReactionReservoirTotal
-                    parameters:
-                        stateexplicit: external%TAlkstateexplicit
+
                     variable_links:
                         R*: TAlk*
                     variable_attributes:                      
@@ -63,7 +53,155 @@ test_carbchem:
                     parameters:
                         components: ["Ci", "B", "S", "F", "Omega"]
                         defaultconcs: ["TS", "TF", "TB", "Ca"]
-                        solve_pH:   external%solve_pH
+                        solve_pH:   solve
+                        outputs:    ["pCO2", "xCO2dryinp", "CO3", "OmegaCA", "OmegaAR"]
+                    variable_links:
+                        TCi_conc: DIC_conc
+
+        oceansurface:
+
+
+        oceanfloor:               
+            reactions:    
+
+test_carbchem_constraint:
+    parameters:
+        CIsotope: IsotopeLinear
+    domains:
+        global:
+
+        ocean:
+            reactions:
+                notransport3box:
+                    class: ReactionOceanNoTransport               
+                    parameters:
+                        area:  [1.0, 1.0, 1.0] # m^2 surface / floor area (per box)
+                        # carb chem test requires
+                        # pressure =  [50.0, 125.0, 1891.0977226008872]
+                        # ReactionOceanNoTransport sets pressure (dbar) = zmid (m)
+                        # so set depth to give zmid (m) = 0.5 * depth = pressure (dbar) =  [50.0, 125.0, 1891.0977226008872]
+                        depth:  [100.0, 250.0, 3782.1954452017744] # m depth (per box)
+
+                oceanphys_const:
+                    class: ReactionConst
+                    parameters:
+                        constnames: ["temp", "sal"]
+                    variable_attributes:
+                        temp:initial_value:     [294.65, 275.65, 275.65] # K = [21.5, 2.5, 2.5] degC
+                        sal:initial_value:      35.0
+                        # rho = [1027.0, 1027.0, 1027.0]   # set by ReactionOceanNoTransport             
+                        # pressure =  [50.0, 125.0, 1891.0977226008872] # set by ReactionOceanNoTransport    
+             
+                reservoir_DIC:
+                    class: ReactionReservoirTotal
+                    parameters:
+                        field_data: external%CIsotope
+                    variable_links:
+                        R*: DIC*
+                    variable_attributes:                      
+                        R:initial_value:       2000.0e-3
+                        R:initial_delta:       -1.0
+
+                reservoir_TAlk:
+                    class: ReactionReservoirTotal
+
+                    variable_links:
+                        R*: TAlk*
+                    variable_attributes:                      
+                        R:initial_value:       2000.0e-3
+
+                # [H+] primary species (as pHfree) for TAlk total
+                H_primary_species: 
+                    class: ReactionConstraintReservoir
+                    variable_links:
+                        Primary_pconc: pHfree
+                        Primary_conc: H_conc
+                        R*: TAlk*
+                    parameters:
+                        primary_total_stoich: 0.0 # ReactionCO2SYS adds H to TAlk_calc
+                        primary_variable: p_concentration # provide pHfree as state variable to solver
+                        constraint_variable: amount # provide TAlk_constraint (mol) as algebraic constraint to solver
+                    variable_attributes: 
+                        Primary_pconc%initial_value: 8.0
+                        Primary_pconc%norm_value: 1.0
+                        R_constraint%norm_value: 1.0
+                
+                carbchem:
+                    class: ReactionCO2SYS
+                    parameters:
+                        components: ["Ci", "B", "S", "F", "Omega"]
+                        defaultconcs: ["TS", "TF", "TB", "Ca"]
+                        solve_pH:   speciationTAlk
+                        outputs:    ["pCO2", "xCO2dryinp", "CO3", "OmegaCA", "OmegaAR"]
+                    variable_links:
+                        TCi_conc: DIC_conc
+
+        oceansurface:
+
+
+        oceanfloor:               
+            reactions:    
+
+
+test_carbchem_implicit:
+    parameters:
+        CIsotope: IsotopeLinear
+    domains:
+        global:
+
+        ocean:
+            reactions:
+                notransport3box:
+                    class: ReactionOceanNoTransport               
+                    parameters:
+                        area:  [1.0, 1.0, 1.0] # m^2 surface / floor area (per box)
+                        # carb chem test requires
+                        # pressure =  [50.0, 125.0, 1891.0977226008872]
+                        # ReactionOceanNoTransport sets pressure (dbar) = zmid (m)
+                        # so set depth to give zmid (m) = 0.5 * depth = pressure (dbar) =  [50.0, 125.0, 1891.0977226008872]
+                        depth:  [100.0, 250.0, 3782.1954452017744] # m depth (per box)
+
+                oceanphys_const:
+                    class: ReactionConst
+                    parameters:
+                        constnames: ["temp", "sal"]
+                    variable_attributes:
+                        temp:initial_value:     [294.65, 275.65, 275.65] # K = [21.5, 2.5, 2.5] degC
+                        sal:initial_value:      35.0
+                        # rho = [1027.0, 1027.0, 1027.0]   # set by ReactionOceanNoTransport             
+                        # pressure =  [50.0, 125.0, 1891.0977226008872] # set by ReactionOceanNoTransport    
+             
+                reservoir_DIC:
+                    class: ReactionReservoirTotal
+                    parameters:
+                        field_data: external%CIsotope
+                    variable_links:
+                        R*: DIC*
+                    variable_attributes:                      
+                        R:initial_value:       2000.0e-3
+                        R:initial_delta:       -1.0
+                
+                # TAlk as total and H (as pH) as primary species
+                reservoir_TAlk_total_H_primary:
+                    class: ReactionImplicitReservoir
+                    variable_links:
+                        Primary_pconc: pHfree
+                        Primary_conc: H_conc
+                        R*: TAlk*
+                    parameters: 
+                        primary_total_stoich: 0.0 # ReactionCO2SYS adds H to TAlk_calc
+                        primary_variable: p_concentration # provide solver with -log10(H_conc)
+                        total_variable: amount # provide solver with TAlk
+                    variable_attributes:
+                        Primary_pconc%initial_value: 8.0  # initial pHfree (will determine initial TAlk)
+                        Primary_pconc%norm_value: 1.0
+
+                carbchem:
+                    class: ReactionCO2SYS
+                    parameters:
+                        components: ["Ci", "B", "S", "F", "Omega"]
+                        defaultconcs: ["TS", "TF", "TB", "Ca"]
+                        solve_pH:   speciationTAlk
                         outputs:    ["pCO2", "xCO2dryinp", "CO3", "OmegaCA", "OmegaAR"]
                     variable_links:
                         TCi_conc: DIC_conc
