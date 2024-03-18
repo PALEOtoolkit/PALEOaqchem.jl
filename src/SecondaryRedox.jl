@@ -572,6 +572,7 @@ function PB.register_methods!(rj::ReactionRedoxH2S_O2)
     
     register_redox_methods(
         rj, rj.stoich_redox_H2S_O2, "O2", "H2S", :R_H2S_O2; 
+        stoich_redox_args=(isotope_data=SIsotopeType,),
         append_message="SIsotopeType=$(SIsotopeType)"
     )
 
@@ -636,7 +637,8 @@ function PB.register_methods!(rj::ReactionRedoxCH4_O2)
     PB.setfrozen!(rj.pars.CIsotope)
     
     register_redox_methods(
-        rj, rj.stoich_redox_CH4_O2, "O2", "CH4", :R_CH4_O2; 
+        rj, rj.stoich_redox_CH4_O2, "O2", "CH4", :R_CH4_O2;
+        stoich_redox_args=(isotope_data=CIsotopeType,),
         append_message="CIsotopeType=$(CIsotopeType)"
     )
 
@@ -696,7 +698,8 @@ function PB.register_methods!(rj::ReactionRedoxCH4_SO4)
     PB.setfrozen!(rj.pars.CIsotope)
     
     register_redox_methods(
-        rj, rj.stoich_redox_CH4_SO4, "SO4", "CH4", :R_CH4_SO4; 
+        rj, rj.stoich_redox_CH4_SO4, "SO4", "CH4", :R_CH4_SO4;
+        stoich_redox_args=(isotope_data=CIsotopeType,),
         append_message="CIsotopeType=$(CIsotopeType)"
     )
 
@@ -794,7 +797,7 @@ PB.register_methods!(rj::ReactionRedoxH2_SO4) = register_redox_methods(rj, rj.st
 
 function register_redox_methods(
     @nospecialize(rj::PB.AbstractReaction), stoich_redox::PB.RateStoich, R1name::String, R2name::String, Rname::Symbol;
-    append_message="", rate_function=do_redox_rate,
+    stoich_redox_args=NamedTuple(), append_message="", rate_function=do_redox_rate,
 )
     @info "register_methods! $(PB.fullname(rj)) $append_message"
 
@@ -817,7 +820,7 @@ function register_redox_methods(
         name="do_redox_"*R1name*"_"*R2name,
     )
 
-    PB.add_method_do!(rj, stoich_redox)
+    PB.add_method_do!(rj, stoich_redox; stoich_redox_args...)
 
     PB.add_method_do_totals_default!(rj)
     PB.add_method_initialize_zero_vars_default!(rj)    
