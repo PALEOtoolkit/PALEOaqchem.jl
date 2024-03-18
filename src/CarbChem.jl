@@ -6,18 +6,27 @@ using PALEOboxes.DocStrings
 import SIMD
 
 import ..PALEOcarbchem
+import ..PALEOaqchem
 
-# import Infiltrator  # Julia debugger
+import Infiltrator  # Julia debugger
 
 """
     ReactionCO2SYS
 
 Carbonate chemistry using PALEOcarbchem.
 
-Three different pH solver approaches are supported, set by `Parameter` `solve_pH`:
-- `solve`: iterative solution for pH, TAlk is a StateExplicit Variable (eg using explicit ODE solver)
+Two different pH solver approaches are supported, set by `Parameter` `solve_pH`:
+- `solve`: iterative solution for pH using an internal Newton solver, at given `TAlk` (eg `TAlk` is a StateExplicit Variable, using explicit ODE solver)
+- `speciation`: calculate speciation given `pHfree`.
+- `speciationTAlk`: calculate speciation given `pHfree`, also add alkalinity contributions to `TAlk_calc`
+  (eg for use in combination with a `ReactionConstraintReservoir` that provides a total variable `TAlk` and `H` (as `pHfree`) as a primary species, for
+  use with a DAE solver to solve the algebraic constraint for `pHfree` at a given `TAlk`).
+
+NB: Two options have been removed from `Parameter` `solve_pH`:
 - `constraint`: additional State Variable for pH and algebraic Constraint for TAlk (requires DAE solver).
+  [replace with `speciationTAlk` and a `ReactionConstraintReservoir`]
 - `implicit`: TAlk is a Total Variable, a function of a State Variable for pH (requires DAE solver)
+  [replace with `speciationTAlk` and a `ReactionImplicitReservoir`]
 
 # Parameters
 $(PARS)
@@ -45,23 +54,23 @@ Base.@kwdef mutable struct ReactionCO2SYS{P} <: PB.AbstractReaction
 
         PB.ParStringVec("outputs", ["pCO2", "xCO2dryinp"],
             allowed_values=["H", "OH", "TS", "HSO4", "TF", "HF", "TCi", "CO2", "HCO3", "CO3", "CAlk", "fCO2", "pCO2", "xCO2dryinp",
-                "TB", "BAlk", "TP", "H3PO4", "H2PO4", "HPO4", "PO4", "PAlk", "TSi", "SiAlk", "TH2S", "HSAlk", "TNH3", "NH3Alk",
+                "TB", "BAlk", "TP", "H3PO4", "H2PO4", "HPO4", "PO4", "PAlk", "TSi", "SiAlk", "TH2S", "H2S", "HSAlk", "TNH3", "NH4", "NH3Alk",
                 "Ca", "OmegaCA", "OmegaAR"], # needs to match PALEOcarbchem.ResultNames
             description="PALEOcarbchem output concentrations etc to include as output variables"),
 
         PB.ParBool("output_pHtot", true, 
             description="true to output pHtot (requires TS_conc and TF_conc)"),
 
-        PB.ParString("solve_pH", "solve", allowed_values=["solve", "constraint", "implicit"],
+        PB.ParString("solve_pH", "solve", allowed_values=["solve", "speciation", "speciationTAlk"],
             description="'solve' to solve iteratively for pH, "*
-                        "'constraint' to include [pHfree] as a state variable and TAlk as a constraint, "*
-                        "'implicit' to include [pHfree] as a state variable and TAlk an implicit variable"),
+                        "'speciation' to just provide speciation at supplied [pHfree], "*
+                        "'speciationTAlk' to provide speciation and add to TAlk_calc"),
 
         PB.ParDouble("pHtol", 100*eps(), units="",
-            description="pH tolerance for iterative solution"),
+            description="with parameter solve_pH=solve only (internal Newton solver): pH tolerance for iterative solution"),
 
         PB.ParString("simd_width", "1", allowed_values=["1", "FP64P2", "FP64P4", "FP32P4", "FP32P8"],
-            description="use SIMD (\"1\" - no SIMD, \"FP64P4\" - 4 x Float64, etc)"),
+            description="with parameter solve_pH=solve only (internal Newton solver): use SIMD (\"1\" - no SIMD, \"FP64P4\" - 4 x Float64, etc)"),
     )
 end
 
@@ -100,44 +109,25 @@ function PB.register_methods!(rj::ReactionCO2SYS)
     )
 
     # add methods to calculate carb chem
-    setup_vars = PB.VariableReaction[var_volume, ]
-
+ 
     if rj.pars.solve_pH[] == "solve"
-        var_pHfree = PB.VarProp("pHfree",         "", "-log10(hydrogen ion concentration)")
-        push!(setup_vars, PB.VarDep(var_pHfree))
+        var_pHfree = PB.VarProp("pHfree", "", "-log10(hydrogen ion concentration), this is used to keep previous value as a starting value for internal Newton solver";
+            attributes=(:initial_value=>8.0,))
+        PB.add_method_setup_initialvalue_vars_default!(rj, [var_pHfree]; filterfn=v->true)
         push!(base_vars,
             var_pHfree,
             PB.VarDep("TAlk_conc",      "mol m^-3", "total TAlk concentration"),
         )
 
-    elseif rj.pars.solve_pH[] == "constraint"
-        var_pHfree = PB.VarState("pHfree",         "", "-log10(hydrogen ion concentration) state variable")
-        var_pHfree_constraint = PB.VarConstraint("pHfree_constraint", "mol", "pH constraint variable for DAE solver")
-        var_TAlk_calc = PB.VarTarget("%reaction%TAlk_calc", "mol", "accumulated TAlk contributions")
-        push!(setup_vars, var_pHfree, var_pHfree_constraint)
-        push!(base_vars, var_pHfree, PB.VarContrib(var_TAlk_calc))
-        constraint_vars = [
-            PB.VarDep("TAlk",      "mol m^-3", "total TAlk"),            
-            var_TAlk_calc,
-            var_pHfree_constraint,
-        ]
-        PB.add_method_do!(
-            rj, 
-            do_carbchem_pH_constraint,
-            (PB.VarList_namedtuple(constraint_vars), ), 
-        )
+    elseif rj.pars.solve_pH[] == "speciation"
+        var_pHfree = PB.VarDep("pHfree",         "", "-log10(hydrogen ion concentration) state variable")
+        push!(base_vars, var_pHfree)
 
-    elseif rj.pars.solve_pH[] == "implicit"
-        var_pHfree = PB.VarState("pHfree",         "", "-log10(hydrogen ion concentration) state variable")
-        var_TAlk = PB.VarTotal(      "TAlk",        "mol",      "TAlk total variable")
-        push!(setup_vars, var_pHfree, var_TAlk)
-        push!(base_vars,
-            var_pHfree,
-            PB.VarProp("%reaction%TAlk_calc", "mol", "ReactionCO2SYS TAlk contributions",
-                attributes=(:initialize_to_zero=>true, )),
-            var_TAlk,
-            # PB.VarContrib("TAlk",          "mol", "TAlk Total Variable"),
-        )
+    elseif rj.pars.solve_pH[] == "speciationTAlk"
+        var_pHfree = PB.VarDep("pHfree",         "", "-log10(hydrogen ion concentration) state variable")
+        var_TAlk_calc = PB.VarContrib("TAlk_calc", "mol", "accumulated TAlk contributions")
+        push!(base_vars, var_pHfree, var_TAlk_calc)
+
     else
         error(String(take!(io)), "\n", "unknown solve_pH=$(rj.pars.solve_pH[])")
     end
@@ -147,12 +137,6 @@ function PB.register_methods!(rj::ReactionCO2SYS)
         push!(base_vars, PB.VarProp("pHtot",           "",         "-log10([H] + [HS]), pH on total scale"))
     end
     PB.setfrozen!(rj.pars.output_pHtot)
-
-    PB.add_method_setup!(
-        rj, 
-        setup_carbchem,
-        (PB.VarList_namedtuple(setup_vars), ),
-    )
 
     # get PALEOcarbchem components struct and required input concentrations
     (components, input_names) = PALEOcarbchem.get_components_inputs(rj.pars.components)
@@ -187,7 +171,7 @@ function PB.register_methods!(rj::ReactionCO2SYS)
             end
             outputlocalname = "%reaction%"*outputname
             println(io, "    adding additional output Variable $(outputlocalname) ($(convunits)) '$(outputlongname)'")
-            push!(output_vars, PB.VarProp(outputlocalname,    convunits, outputlongname))
+            push!(output_vars, PB.VarProp(outputlocalname,    convunits, outputlongname; attributes=PALEOaqchem.R_conc_attributes_advectfalse))
         end
     end
     PB.setfrozen!(rj.pars.outputs)
@@ -211,8 +195,6 @@ function PB.register_methods!(rj::ReactionCO2SYS)
             ),
         preparefn = prepare_do_carbchem,
     )
-
-    PB.add_method_initialize_zero_vars_default!(rj) # constraint and implicit variables
 
     @info String(take!(io))
 
@@ -248,46 +230,6 @@ function do_modern_default_concs(
     return nothing
 end
 
-function setup_carbchem(
-    m::PB.ReactionMethod,
-    pars,
-    (vars, ),
-    cellrange::PB.AbstractCellRange,
-    attribute_name
-)
-    attribute_name in (:initial_value, :norm_value) || return
-
-    initial_pHfree = Dict(:initial_value=>8.0, :norm_value=>1.0)[attribute_name]
-
-    if pars.solve_pH[] == "solve"
-        # pHfree is a VarProp used to keep previous value as a starting value
-        if attribute_name == :initial_value
-            vars.pHfree[cellrange.indices] .= initial_pHfree
-            @info "PALEOcarbchem initialize_state:$(rpad(attribute_name,20)) $(rpad("pHfree", 30)) = $initial_pHfree"
-        end
-
-    elseif pars.solve_pH[] == "constraint"
-        # pHfree is a State Variable
-        vars.pHfree[cellrange.indices] .= initial_pHfree
-        @info "PALEOcarbchem initialize_state:$(rpad(attribute_name,20)) $(rpad("pHfree", 30)) = $initial_pHfree"
-        if attribute_name == :norm_value           
-            vars.pHfree_constraint[cellrange.indices] .= 1.0
-            @info "PALEOcarbchem initialize_state:$(rpad(attribute_name,20)) $(rpad("pHfree_constraint", 30)) = 1.0"
-        end
-
-    elseif pars.solve_pH[] == "implicit"
-        # pHfree is a State Variable
-        vars.pHfree[cellrange.indices] .= initial_pHfree
-        @info "PALEOcarbchem initialize_state:$(rpad(attribute_name,20)) $(rpad("pHfree", 30)) = $initial_pHfree"
-        initial_TAlk_conc = PB.get_domvar_attribute(PB.get_variable(m, "TAlk"), attribute_name)
-        vars.TAlk[cellrange.indices] .= initial_TAlk_conc*vars.volume[cellrange.indices]  
-        @info "PALEOcarbchem initialize_state:$(rpad(attribute_name,20)) $(rpad("TAlk", 30)) = $initial_TAlk_conc * volume"
-    else
-        error("unknown solve_pH $(pars.solve_pH[])")
-    end   
-
-    return nothing
-end
 
 function prepare_do_carbchem(m::PB.ReactionMethod, (vars, input_concs, outputs))
 
@@ -296,16 +238,15 @@ function prepare_do_carbchem(m::PB.ReactionMethod, (vars, input_concs, outputs))
     # work out BufType for temporary arrays
     PB.setfrozen!(rj.pars.simd_width)
     if rj.pars.simd_width[] == "1"
-         # may be an AD type etc, so get type from a Variable that is likely to be a state Variable
-        BufType = nothing
-        vnames_ad = (:TAlk, :TAlk_calc, :TAlk_conc)
-        for vname in vnames_ad
-            if vname in propertynames(vars)
-                BufType = eltype(getfield(vars, vname))
-                break;
+         # may need to be an AD type etc, so check all Variables to look for something that is not Float64
+        BufType = Float64
+        for v in merge(vars, input_concs, outputs)
+            et = eltype(v)
+            if et != Float64
+                BufType = et
+                break
             end
-        end
-        !isnothing(BufType) || error("ReactionCO2SYS simd_width=\"1\" couldnt determine BufType, tried $vnames_ad")       
+        end  
     elseif rj.pars.simd_width[] == "FP64P2"
         BufType = PB.SIMDutils.FP64P2
     elseif rj.pars.simd_width[] == "FP64P4"
@@ -409,10 +350,11 @@ function do_carbchem(
                 do_dTAdpH=Val(false),
             )
 
-            vvolume = PB.SIMDutils.vgatherind(BufType, vars.volume, i)
-            #    mol m-3                    mol kg-1 kg m-3                                           
-            PB.SIMDutils.vaddind!(TA*rhofac*vvolume, vars.TAlk_calc, i)
-
+            if hasfield(typeof(vars), :TAlk_calc)
+                vvolume = PB.SIMDutils.vgatherind(BufType, vars.volume, i)
+                #    mol m-3                    mol kg-1 kg m-3                                           
+                PB.SIMDutils.vaddind!(TA*rhofac*vvolume, vars.TAlk_calc, i)
+            end
         end
 
        
@@ -444,28 +386,7 @@ function do_carbchem(
 
     end
 
-    if pars.solve_pH[] == "implicit"
-        @inbounds for i in cellrange.indices
-            vars.TAlk[i] += vars.TAlk_calc[i]
-        end
-    end
-
     return nothing
 end
-
-function do_carbchem_pH_constraint(
-    m::PB.ReactionMethod,
-    (vars, ),
-    cellrange::PB.AbstractCellRange,
-    deltat
-)
-
-    @inbounds for i in cellrange.indices
-        vars.pHfree_constraint[i] =   vars.TAlk_calc[i] - vars.TAlk[i]
-    end
-
-    return nothing
-end
-
 
 end
