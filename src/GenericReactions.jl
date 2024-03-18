@@ -10,12 +10,19 @@ import Infiltrator
 """
     ReactionAqEqb
 
-Define a new equilibrium species or omega N  
+Define a new equilibrium species `N`  
 
     N + a A <--> b B + c C
 
-    [N] = (1/K_eqb) ([B]^b [C]^c) / (A^a)
+    [N] = K_eqb'^K_power ([B]^b [C]^c) / ([A]^a)
 
+where to convert density units for `K_eqb`:
+
+    K_eqb' = K_eqb * rho_ref^K_density_power
+
+The first name in the `Reactants` list is the new species concentration: 
+other species concentrations in `Reactants` and `Products` lists must already be
+defined elsewhere in the model configuration.
 
 # Parameters
 $(PARS)
@@ -28,16 +35,17 @@ Base.@kwdef mutable struct ReactionAqEqb{P} <: PB.AbstractReaction
 
     pars::P = PB.ParametersTuple(
 
-        PB.ParStringVec("Reactants", ["H2S_conc"];
+        PB.ParStringVec("Reactants", ["N_conc", "A_conc^2"];
             description="concentrations or activities of new species followed by other reactants, write powers as X^2 etc"),
-        PB.ParStringVec("Products", [ "HSm_conc", "Hp_conc"];
+        PB.ParStringVec("Products", [ "B_conc", "C_conc"];
             description="concentrations or activities of products, write powers as X^2 etc"),
-        PB.ParDouble("K_eqb", 1.814e-7*1027, units="mol m-3 or mol kg-1",
+        PB.ParDouble("K_eqb", 1.814e-7*1027, units="",
             description="equilibrium constant"),
         PB.ParDouble("K_density_power", 0.0;
             description="multiple K_eqb * rho_ref^K_density_power to convert units: 0.0 for K_eqb in mol m-3, 1.0 for K_eqb in mol kg-1, etc"),
-        
-        PB.ParStringVec("N_components", ["SmIIaqtot_calc_conc"] ,
+        PB.ParDouble("K_power", -1.0, 
+            description="exponent of K_eqb"),
+        PB.ParStringVec("N_components", ["TN_calc_conc"] ,
             description="contribution of new species to element or component total concentrations, empty vector to just define an Omega"),
     )
 
@@ -57,10 +65,13 @@ function PB.register_methods!(rj::ReactionAqEqb)
         push!(vars, PB.VarDep("rho_ref", "kg m-3", "reference density"))
     end
     # convert to integer if possible, as integer powers are much faster
-    K_density_power = isinteger(K_density_power) ? Int64(K_density_power) : K_density_power
+    K_density_power = isinteger(K_density_power) ? Int(K_density_power) : K_density_power
+
+    K_power = rj.pars.K_power[]
+    K_power = isinteger(K_power) ? Int(K_power) : K_power
 
     N_conc_name = first(rj.pars.Reactants.v)
-    N_conc_var = PB.VarProp(N_conc_name, "mol m-3", "aqueous concentration or activity"; attributes=PALEOaqchem.R_conc_attributes)
+    N_conc_var = PB.VarProp(N_conc_name, "mol m-3", "aqueous concentration or activity"; attributes=PALEOaqchem.R_conc_attributes_advectfalse)
 
     other_reactant_conc_vars = PB.VariableReaction[]
     other_reactant_powers = []
@@ -86,6 +97,8 @@ function PB.register_methods!(rj::ReactionAqEqb)
         push!(component_vars, PB.VarContrib(name, "mol", "total moles"))
     end
 
+    PB.setfrozen!(rj.pars.Reactants, rj.pars.Products, rj.pars.N_components)
+
     PB.add_method_do!(
         rj,
         do_aqeqb, 
@@ -96,7 +109,7 @@ function PB.register_methods!(rj::ReactionAqEqb)
             PB.VarList_tuple(product_conc_vars),
             PB.VarList_tuple(component_vars),
         );
-        p = (Tuple(other_reactant_powers), Tuple(product_powers), K_density_power)
+        p = (Tuple(other_reactant_powers), Tuple(product_powers), K_density_power, K_power)
     )
 
     return nothing
@@ -104,7 +117,7 @@ end
 
 function do_aqeqb(m::PB.ReactionMethod, pars, (vars, N_conc, other_reactant_concs, product_concs, components), cellrange::PB.AbstractCellRange, deltat)
     rj = m.reaction
-    other_reactant_powers, product_powers, K_density_power = m.p
+    other_reactant_powers, product_powers, K_density_power, K_power = m.p
 
     for i in cellrange.indices
         sc_denom = mapreduce(x->max(PB.get_total(x[1][i]), 0.0)^x[2], *, zip(other_reactant_concs, other_reactant_powers); init=1.0)
@@ -114,8 +127,9 @@ function do_aqeqb(m::PB.ReactionMethod, pars, (vars, N_conc, other_reactant_conc
         if !iszero(K_density_power)
             Keqb *= vars.rho_ref[i]^K_density_power
         end
+        Keqb = Keqb^K_power
 
-        N_conc[i] = sc_num / (sc_denom * Keqb)
+        N_conc[i] = Keqb * sc_num / sc_denom
 
         PB.IteratorUtils.foreach_longtuple(components, rj.component_stoichs) do c, s
             c[i] += s * N_conc[i] * vars.volume[i]
@@ -137,12 +151,12 @@ Rate (default) is:
 
     R = K * [A] * [B]
 
-where this can be modified to different power-law dependency.
+where this can be modified to different functional form by defining a vector of `Rate_functions` to apply to each concentration variable.
 
-Parameters `Reactants` and `Products` should be the vectors of stoichiometry * name of (total) species to accumulate fluxes into `_sms` variables.
+Parameters `Reactants` and `Products` should be the vectors of stoichiometry * <name> of (total) species to accumulate fluxes into `<name>_sms` variables.
 
-`Reactant_conc` should be an empty vector to take concentration names from `Reactants`, or a Vector of name[^power] to calculate rate with explicit
-species names (eg where `Reactants` refers to totals which are partioned into multiple species by equilibrium reactions) or non-first-order rate dependence.
+Parameter `Reactant_concs` should be an empty vector to take default concentration variable names from `Reactants`, or a Vector of names to specify 
+concentration species names explicitly (required when eg where `Reactants` refers to totals which are partioned into multiple species).
 
 # Parameters
 $(PARS)
@@ -160,7 +174,10 @@ Base.@kwdef mutable struct ReactionAqKinetic{P} <: PB.AbstractReaction
         PB.ParStringVec("Products", [ "2*C", "D"];
             description="product species"),
         PB.ParStringVec("Reactant_concs", String[],
-            description="names of concentration variables to calculate rate eg '[`\"A_conc^0.5\"]' etc, empty vector to used defaults from 'Reactants' eg 'A_conc', 'B_conc' ..."),
+            description="names of concentration variables to calculate rate eg '[`\"A_conc\"]' etc, empty vector to used defaults from 'Reactants' eg 'A_conc', 'B_conc' ..."),
+        PB.ParStringVec("Rate_functions", String[];
+            allowed_values=["linear", "sqrt"],
+            description="functional form for rate function of each concentration (empty vector for default 'linear')"),
         PB.ParDouble("K", NaN;
             description="rate constant"),
     )
@@ -198,13 +215,18 @@ function PB.register_methods!(rj::ReactionAqKinetic)
     )
     
     reactant_concs = isempty(rj.pars.Reactant_concs.v) ? reactant_names .* "_conc" : rj.pars.Reactant_concs.v 
-    reactant_conc_vars = PB.VariableReaction[]
-    reactant_powers = []
-    for rnp in reactant_concs
-        rp, rn = PALEOaqchem.parse_name_to_power_number(rnp)
-        push!(reactant_conc_vars, PB.VarDep(rn, "mol m-3", "aqueous concentration or activity"))
-        push!(reactant_powers, rp)
-    end
+    reactant_conc_vars = [PB.VarDep(rn, "mol m-3", "aqueous concentration or activity") for rn in reactant_concs]
+    
+    rate_functions = isempty(rj.pars.Rate_functions.v) ? fill("linear", length(reactant_concs)) : rj.pars.Rate_functions.v
+    length(rate_functions) == length(reactant_concs) ||
+        error("number of 'Rate_functions' != number of 'Reactant_concs")
+    @inline f_linear_rate(c) = max(PB.get_total(c), 0.0)
+    @inline f_sqrt_rate(c) = sqrt(max(PB.get_total(c), 0.0))
+    f_dict = Dict(
+        "linear"=>f_linear_rate,
+        "sqrt"=>f_sqrt_rate,
+    )
+    rate_funcs = [f_dict[fn] for fn in rate_functions]
 
     volume = PB.VarDep("volume", "m3", "cell solute volume")
     PB.add_method_do!(
@@ -215,8 +237,10 @@ function PB.register_methods!(rj::ReactionAqKinetic)
             PB.VarList_tuple(reactant_conc_vars),
             PB.VarList_single(volume),
         );
-        p=Tuple(reactant_powers)
+        p=Tuple(rate_funcs) # supply a tuple so that code is fully typed
     )
+
+    PB.setfrozen!(rj.pars.Reactants, rj.pars.Products, rj.pars.Reactant_concs, rj.pars.Rate_functions)
 
     PB.add_method_do!(rj, stoich_redox)
 
@@ -227,17 +251,39 @@ function PB.register_methods!(rj::ReactionAqKinetic)
 end
 
 function do_aqkinetic(m::PB.ReactionMethod, pars, (ratevar, reactant_concs, volume), cellrange::PB.AbstractCellRange, deltat)
-    reactant_powers = m.p
+    rate_functions = m.p
 
     rateparval = pars.K[]
 
-    for i in cellrange.indices
-        ratevar[i] = mapreduce(x->max(PB.get_total(x[2][i]), 0.0)^x[1], *, zip(reactant_powers, reactant_concs); init=rateparval*volume[i])
-        # ratevar[i] = max(PB.get_total(reactant_concs[1][i]), 0.0) * max(PB.get_total(reactant_concs[2][i]), 0.0)*rateparval*volume[i]
+    # 0 reactant_concs
+    function _do_aqkinetic(rateparval, ratevar, _, volume, cellrange)
+        for i in cellrange.indices
+            ratevar[i] = rateparval*volume[i]    
+        end       
+        return nothing
     end
+
+    # 1 reactant_concs
+    function _do_aqkinetic(rateparval, ratevar, reactant_concs, volume, cellrange, f1)
+        for i in cellrange.indices
+            ratevar[i] = rateparval*f1(reactant_concs[1][i])*volume[i]
+        end       
+        return nothing
+    end
+
+    # 2 reactant_concs
+    function _do_aqkinetic(rateparval, ratevar, reactant_concs, volume, cellrange, f1, f2)
+        for i in cellrange.indices
+            ratevar[i] = rateparval*f1(reactant_concs[1][i])*f2(reactant_concs[2][i])*volume[i]
+        end       
+        return nothing
+    end
+
+    _do_aqkinetic(rateparval, ratevar, reactant_concs, volume, cellrange, rate_functions...)
    
     return nothing
 end
+
 
 
 """
@@ -317,6 +363,8 @@ function PB.register_methods!(rj::ReactionAqPrecipDissol)
     solid_conc_name = isempty(rj.pars.Solid_conc[]) ? first(product_names) .* "_conc" : rj.pars.Solid_conc[]
     solid_conc_var = PB.VarDep(solid_conc_name, "mol m-3", "solid concentration or activity")
     volume = PB.VarDep("volume", "m3", "cell solid phase volume")
+
+    PB.setfrozen!(rj.pars.Reactants, rj.pars.Products, rj.pars.Solid_conc)
 
     PB.add_method_do!(
         rj,
