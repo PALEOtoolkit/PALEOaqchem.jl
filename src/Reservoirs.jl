@@ -255,11 +255,12 @@ Base.@kwdef mutable struct ReactionImplicitReservoir{P} <: PB.AbstractReaction
             description="contribution of primary species to other element or component total concentrations"),
         PB.ParString("primary_variable", "concentration";
             allowed_values=["concentration", "amount", "p_concentration"],
-            description="units for primary variable"),
+            description="units for primary variable (specifies Primary_conc, Primary, Primary_pconc as StateTotal variable)"),
         PB.ParString("total_variable", "concentration";
             allowed_values=["concentration", "amount"],
-            description="units for total variable"),
-
+            description="units for total variable (specifies R_conc, R as Total variable)"),
+        PB.ParBool("total", false,
+            description="true to calculate R_total = sum(R)"),
     )
 
     component_stoichs::Vector{Float64} = Float64[]
@@ -271,7 +272,7 @@ function PB.register_methods!(rj::ReactionImplicitReservoir)
     R_calc = PB.VarTarget("R_calc", "m-3", "contributions to total R_calc_conc (NB: a total, not concentration, to generalize to multiphase eqb)")
 
     default_setup_vars = PB.VariableReaction[] # any state Variables that need "standard" setup (no volume conversions etc)
-
+    
     # define the variables we need for Primary_conc etc
     primary_volume = PB.VarDep("primary_volume"=>"volume", "m3", "cell volume (as used by Primary_conc)")
     primary_vars = PB.VariableReaction[PB.VarContrib(R_calc), primary_volume]
@@ -315,16 +316,15 @@ function PB.register_methods!(rj::ReactionImplicitReservoir)
 
     PB.add_method_do!(rj, do_implicitreservoir_primary, (PB.VarList_namedtuple(primary_vars), PB.VarList_tuple(component_vars),))
 
-
     # define the variables we need to calculate the total and total_sms    
     volume = PB.VarDep("volume", "m3", "cell volume (as used by total variable)")
     total_vars = PB.VariableReaction[R_calc, volume]
     if rj.pars.total_variable[] == "concentration"
+        R = PB.VarProp("R", "mol", "total or component R")
         R_conc = PB.VarTotal("R_conc", "mol m-3", "total or component R_conc"; attributes=PALEOaqchem.R_conc_attributes_advecttrue)
         push!(default_setup_vars, R_conc)
-        append!(total_vars, [
-            R_conc,
-        ])
+
+        append!(total_vars, [R, R_conc,])
         
         # provide R_sms to accumulate source - sink fluxes, then convert to R_conc_sms for solver
         total_sms_vars = [
@@ -337,17 +337,15 @@ function PB.register_methods!(rj::ReactionImplicitReservoir)
 
     elseif rj.pars.total_variable[] == "amount"
         R = PB.VarTotal("R", "mol", "total or component R")
+        R_conc = PB.VarProp("R_conc", "mol m-3", "total or component R_conc"; attributes=PALEOaqchem.R_conc_attributes_advecttrue)
         PB.add_method_setup_initialvalue_vars_default!(
             rj, [R],
             convertvars = [volume],
             convertfn = ((volume,), i) -> volume[i],
             convertinfo = " * volume",
         )
-        R_conc = PB.VarProp("R_conc", "mol m-3", "total or component R_conc"; attributes=PALEOaqchem.R_conc_attributes_advecttrue)
-        append!(total_vars, [
-            R,
-            R_conc,
-        ])
+        
+        append!(total_vars, [R, R_conc,])
 
         R_sms = PB.VarDeriv("R_sms", "mol yr-1", "total or component R source - sink")        
         PB.add_method_do_nothing!(rj, [R_sms]) # we don't need to access this, but must be registered
@@ -359,6 +357,13 @@ function PB.register_methods!(rj::ReactionImplicitReservoir)
     PB.add_method_do!(rj, do_implicitreservoir_total, (PB.VarList_namedtuple(total_vars),))
     
     PB.add_method_setup_initialvalue_vars_default!(rj, default_setup_vars)
+
+    if rj.pars.total[]
+        # workaround: can't calculate total for a VarTotal R so create a VarDep that will link to R
+        R_dep = PB.VarDep("R", "mol", "total or component R"; attributes=(:calc_total=>true, :field_data=>PB.get_attribute(R, :field_data),))
+        PB.add_method_do_totals_default!(rj, [R_dep])
+    end
+    PB.setfrozen!(rj.pars.total)
 
     PB.add_method_initialize_zero_vars_default!(rj)
 
@@ -393,19 +398,11 @@ end
 
 function do_implicitreservoir_total(m::PB.AbstractReactionMethod, pars, (vars,), cellrange::PB.AbstractCellRange, deltat)
 
-    if pars.total_variable[] == "concentration"
-        for i in cellrange.indices
-            vars.R_conc[i]  = vars.R_calc[i]/vars.volume[i]
-        end
-    elseif pars.total_variable[] == "amount"
-        for i in cellrange.indices
-            vars.R[i]  = vars.R_calc[i]
-            vars.R_conc[i] = vars.R[i]/vars.volume[i]
-        end
-    else
-        error("do_implicitreservoir_total: unsupported 'total_variable' = $(pars.total_variable[])")
+    for i in cellrange.indices
+        vars.R[i]  = vars.R_calc[i]
+        vars.R_conc[i] = vars.R[i]/vars.volume[i]
     end
-
+    
     return nothing
 end
 
