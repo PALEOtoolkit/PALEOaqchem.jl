@@ -47,7 +47,7 @@ const default_reminOrgOxNO3NO2 = PB.RateStoich(
 const default_reminOrgOxNO3only = PB.RateStoich(
     PB.VarProp("reminOrgOxNO3only", "mol O2eq yr-1", "5/4 NO3 consumption (-ve) by remineralization",
         attributes=(:calc_total=>true,)),
-    ((4/5, "NO3"), (-4/5, "TAlk")), # NB: stoichiometry is *-1
+    ((4/5, "NO3"), (-2/5, "N2"), (-4/5, "TAlk")), # NB: stoichiometry is *-1
     sms_prefix="soluteflux_",
     sms_suffix="",
     processname="remin",

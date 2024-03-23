@@ -24,6 +24,8 @@ The first name in the `Reactants` list is the new species concentration:
 other species concentrations in `Reactants` and `Products` lists must already be
 defined elsewhere in the model configuration.
 
+The contribution of the new species to element totals or components is defined by the `N_components` vector,
+
 # Parameters
 $(PARS)
 
@@ -45,8 +47,8 @@ Base.@kwdef mutable struct ReactionAqEqb{P} <: PB.AbstractReaction
             description="multiple K_eqb * rho_ref^K_density_power to convert units: 0.0 for K_eqb in mol m-3, 1.0 for K_eqb in mol kg-1, etc"),
         PB.ParDouble("K_power", -1.0, 
             description="exponent of K_eqb"),
-        PB.ParStringVec("N_components", ["TN_calc_conc"] ,
-            description="contribution of new species to element or component total concentrations, empty vector to just define an Omega"),
+        PB.ParStringVec("N_components", ["2*TN_calc_conc"] ,
+            description="contribution of new species to element or component total concentrations (or empty vector to just define an Omega)"),
     )
 
     component_stoichs::Vector{Float64} = Float64[]
@@ -176,10 +178,12 @@ Base.@kwdef mutable struct ReactionAqKinetic{P} <: PB.AbstractReaction
         PB.ParStringVec("Reactant_concs", String[],
             description="names of concentration variables to calculate rate eg '[`\"A_conc\"]' etc, empty vector to used defaults from 'Reactants' eg 'A_conc', 'B_conc' ..."),
         PB.ParStringVec("Rate_functions", String[];
-            allowed_values=["linear", "sqrt"],
+            allowed_values=["linear", "sqrt", "monod"],
             description="functional form for rate function of each concentration (empty vector for default 'linear')"),
         PB.ParDouble("K", NaN;
             description="rate constant"),
+        PB.ParDouble("K_lim", NaN, units="mol m-3";
+            description="limiting concentration for 'monod' rate function"),
     )
 end
 
@@ -220,11 +224,13 @@ function PB.register_methods!(rj::ReactionAqKinetic)
     rate_functions = isempty(rj.pars.Rate_functions.v) ? fill("linear", length(reactant_concs)) : rj.pars.Rate_functions.v
     length(rate_functions) == length(reactant_concs) ||
         error("number of 'Rate_functions' != number of 'Reactant_concs")
-    @inline f_linear_rate(c) = max(PB.get_total(c), 0.0)
-    @inline f_sqrt_rate(c) = sqrt(max(PB.get_total(c), 0.0))
+    @inline f_linear_rate(c, klim) = max(PB.get_total(c), 0.0)
+    @inline f_sqrt_rate(c, klim) = sqrt(max(PB.get_total(c), 0.0))
+    @inline f_monod_rate(c, klim) = max(PB.get_total(c), 0.0)/(max(PB.get_total(c), 0.0) + klim)
     f_dict = Dict(
         "linear"=>f_linear_rate,
         "sqrt"=>f_sqrt_rate,
+        "monod"=>f_monod_rate,
     )
     rate_funcs = [f_dict[fn] for fn in rate_functions]
 
@@ -253,33 +259,32 @@ end
 function do_aqkinetic(m::PB.ReactionMethod, pars, (ratevar, reactant_concs, volume), cellrange::PB.AbstractCellRange, deltat)
     rate_functions = m.p
 
-    rateparval = pars.K[]
-
+ 
     # 0 reactant_concs
-    function _do_aqkinetic(rateparval, ratevar, _, volume, cellrange)
+    function _do_aqkinetic(K, K_lim, ratevar, _, volume, cellrange)
         for i in cellrange.indices
-            ratevar[i] = rateparval*volume[i]    
+            ratevar[i] = K*volume[i]    
         end       
         return nothing
     end
 
     # 1 reactant_concs
-    function _do_aqkinetic(rateparval, ratevar, reactant_concs, volume, cellrange, f1)
+    function _do_aqkinetic(K, K_lim, ratevar, reactant_concs, volume, cellrange, f1)
         for i in cellrange.indices
-            ratevar[i] = rateparval*f1(reactant_concs[1][i])*volume[i]
+            ratevar[i] = K*f1(reactant_concs[1][i], K_lim)*volume[i]
         end       
         return nothing
     end
 
     # 2 reactant_concs
-    function _do_aqkinetic(rateparval, ratevar, reactant_concs, volume, cellrange, f1, f2)
+    function _do_aqkinetic(K, K_lim, ratevar, reactant_concs, volume, cellrange, f1, f2)
         for i in cellrange.indices
-            ratevar[i] = rateparval*f1(reactant_concs[1][i])*f2(reactant_concs[2][i])*volume[i]
+            ratevar[i] = K*f1(reactant_concs[1][i], K_lim)*f2(reactant_concs[2][i], K_lim)*volume[i]
         end       
         return nothing
     end
 
-    _do_aqkinetic(rateparval, ratevar, reactant_concs, volume, cellrange, rate_functions...)
+    _do_aqkinetic(pars.K[], pars.K_lim[], ratevar, reactant_concs, volume, cellrange, rate_functions...)
    
     return nothing
 end
@@ -391,18 +396,18 @@ function do_aqprecipdissol(m::PB.ReactionMethod, pars, (ratevar, solid_conc, ome
     K_dissol = pars.K_dissol[]
 
     dissol_rolloff_conc = pars.dissol_rolloff_conc[]    
-    f_rolloff(x, xmin) = x/(xmin + x)
+    f_rolloff(x, xmin) = iszero(xmin) ? x : x/(xmin + x)
 
     for i in cellrange.indices
         # set ratevar to 0, with fake dependencies on variables for AD sparsity detection 
         ratevar[i] = 0.0*omega[i] + 0.0*solid_conc[i]
         if omega[i] > 1
             # mol yr-1 =  mol m-3 yr-1          * m^3      * bodge
-            ratevar[i] = K_precip*(omega[i] - 1)*volume[i] # * f_rolloff(omega[i]-1, 1e-1)
+            ratevar[i] += K_precip*(omega[i] - 1)*volume[i] # * f_rolloff(omega[i]-1, 1e-1)
         elseif omega[i] < 1
             sc_checked = max(solid_conc[i], 0.0)
             # mol yr-1 = yr-1     mol m-3                     * m^3     * additional rolloff at low concentrations (to help numerics)
-            ratevar[i] = -K_dissol*sc_checked*(1 - omega[i])*volume[i] *f_rolloff(sc_checked, dissol_rolloff_conc) # * f_rolloff(1 - omega[i], 1e-1)
+            ratevar[i] -= K_dissol*sc_checked*(1 - omega[i])*volume[i] *f_rolloff(sc_checked, dissol_rolloff_conc) # * f_rolloff(1 - omega[i], 1e-1)
         end
     end
    

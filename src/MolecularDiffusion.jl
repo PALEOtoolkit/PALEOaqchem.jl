@@ -236,4 +236,35 @@ const difflinT = (
 
 )
 
+"""
+    ionic_charge(species) -> charge
+
+Get ionic charge, return nothing
+if species neutral or not known
+"""
+function ionic_charge(species)
+
+    charge_p2 = ["Fe", "Mg", "Mn", "Sr"]
+    charge_p1 = ["H", "Li", "Na", "K", "NH4"]    
+    charge_m1 = ["OH", "Cl", "F", "HCO3", "H2PO4", "HS", "HSO3", "HSO4", "I", "IO3", "NO2", "NO3"]
+    charge_m2 = ["CO3", "HPO4", "SO3", "SO4"]
+    charge_m3 = ["PO4"]
+   
+    charge = nothing
+
+    if species in charge_p2
+        charge = 2
+    elseif speces in charge_p1
+        charge = 1
+    elseif species in charge_m1
+        charge = -1
+    elseif species in charge_m2
+        charge = -2
+    elseif species in charge_m3
+        charge = -3
+    end
+
+    return charge
+end
+
 end # module

@@ -3,6 +3,8 @@ module CoPrecip
 import PALEOboxes as PB
 using PALEOboxes.DocStrings
 
+import ..PALEOaqchem
+
 """
     ReactionPACoPrecip
 
@@ -11,6 +13,9 @@ Co-precipitation of P (eg iron-bound phosphorus)  with A (eg Fe oxide) formation
     P -> P=A
 
 at a rate `gamma * A_formation_rate_<n>`, with limitation at low P concentration
+
+`P_components` defines solution totals  or components that should be modified when P is consumed
+(eg `["-1*P"]` to remove "P" from solution)
 
 # Parameters
 $(PARS)
@@ -28,15 +33,8 @@ Base.@kwdef mutable struct ReactionPACoPrecip{P} <: PB.AbstractReaction
             description="P:A molar ratio"),
         PB.ParDouble("P_limit", 1e-6, units="mol m-3",
             description="limiting P concentration below which co-precipitation is inhibited"),
-    )
-
-    stoich_PA_coprecip = PB.RateStoich(
-        PB.VarProp("rate_PA_coprecip", "mol P yr-1", "rate of P co-precipitation",
-                        attributes=(:calc_total=>true,)),
-        ((-1.0, "P"), (1.0, "PA"),), 
-        sms_prefix="", 
-        sms_suffix="_sms",
-        processname="coprecip",
+        PB.ParStringVec("P_components", ["-1*P", "TAlk"] ,
+            description="totals or components that should be modified when P is consumed from solution"),
     )
 
 end
@@ -45,8 +43,20 @@ function PB.register_methods!(rj::ReactionPACoPrecip)
 
     @info "register_methods! $(PB.fullname(rj))"
 
+    P_stoichcomponents = PALEOaqchem.parse_number_name.(rj.pars.P_components.v)
+    PB.setfrozen!(rj.pars.P_components)
+    
+    stoich_PA_coprecip = PB.RateStoich(
+        PB.VarProp("rate_PA_coprecip", "mol P yr-1", "rate of P co-precipitation",
+                        attributes=(:calc_total=>true,)),
+        (P_stoichcomponents..., (1.0, "PA"),), 
+        sms_prefix="", 
+        sms_suffix="_sms",
+        processname="coprecip",
+    )
+
     vars = [
-        rj.stoich_PA_coprecip.ratevartemplate,
+        stoich_PA_coprecip.ratevartemplate,
         PB.VarDep("P_conc", "mol m-3", "P concentration"),
     ]
 
@@ -63,7 +73,7 @@ function PB.register_methods!(rj::ReactionPACoPrecip)
         );
     )
 
-    PB.add_method_do!(rj, rj.stoich_PA_coprecip)
+    PB.add_method_do!(rj, stoich_PA_coprecip)
 
     PB.add_method_do_totals_default!(rj)
     PB.add_method_initialize_zero_vars_default!(rj)    
@@ -96,10 +106,8 @@ Release of P (eg iron-bound phosphorus) with A (eg Fe oxide) destruction
 
 at a rate `Prelease = theta * A_destruction_rate_<n>`, where `theta = PA_conc / A_conc`
 
-`Prelease` is then partioned into two fluxes:
-
-    P_sms = (1 - partion_frac) * Prelease
-    P2_sms = partition_frac * Prelease
+`P_components` defines totals  or components that should be modified when P is released
+(eg `["P"]` to return `P` to solution).
 
 # Parameters
 $(PARS)
@@ -113,8 +121,8 @@ Base.@kwdef mutable struct ReactionPARelease{P} <: PB.AbstractReaction
     pars::P = PB.ParametersTuple(
         PB.ParDoubleVec("A_rate_stoich_factors", [1.0],
             description="stoichiometry factor to multiply each A destruction rate variable to convert to mol A"),
-        PB.ParDouble("partition_frac", 0.0,
-            description="fraction of P to partition into P2_sms")
+        PB.ParStringVec("P_components", ["P", "-1*TAlk"] ,
+            description="totals or components that should be modified when P is released"),
     )
 
 end
@@ -123,15 +131,17 @@ function PB.register_methods!(rj::ReactionPARelease)
 
     @info "register_methods! $(PB.fullname(rj))"
 
+    P_stoichcomponents = PALEOaqchem.parse_number_name.(rj.pars.P_components.v)
+    PB.setfrozen!(rj.pars.P_components)
+
     stoich_PA_release = PB.RateStoich(
         PB.VarProp("rate_PA_release", "mol P yr-1", "rate of coprecipitated P dissolution",
                         attributes=(:calc_total=>true,)),
-        ((-1.0, "PA"), ((1.0 - rj.pars.partition_frac[]), "P"), (rj.pars.partition_frac[], "P2")), 
+        ((-1.0, "PA"), P_stoichcomponents...), 
         sms_prefix="", 
         sms_suffix="_sms",
         processname="coprecip",
     )
-    PB.setfrozen!(rj.pars.partition_frac)
 
     vars = [
         stoich_PA_release.ratevartemplate,

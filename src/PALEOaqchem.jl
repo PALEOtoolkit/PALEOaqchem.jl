@@ -105,10 +105,6 @@ include("Boron.jl")
 
 include("CoPrecip.jl")
 
-include("CFA.jl")
-
 include("MolecularDiffusion.jl")
-
-include("FeS_deprecated.jl")
 
 end # module PALEOaqchem
