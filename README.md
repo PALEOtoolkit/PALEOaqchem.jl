@@ -3,44 +3,38 @@
 [![CI](https://github.com/PALEOtoolkit/PALEOaqchem.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/PALEOtoolkit/PALEOaqchem.jl/actions/workflows/CI.yml)
 [![](https://img.shields.io/badge/docs-dev-blue.svg)](https://PALEOtoolkit.github.io/PALEOaqchem.jl/dev)
 
-Aquatic biogeochemistry components for the PALEO biogeochemical model framework.
+Aquatic biogeochemistry components for the [PALEOtoolkit](https://github.com/PALEOtoolkit) biogeochemical model framework.
 
+The PALEOaqchem package implements biogeochemistry components that provide:
+- representation of organic matter phases (as discrete reactivity fractions or as a reactive-continuum model) and remineralization by oxygen, nitrogen, manganese, iron, sulphur and disproportionation to methane.
+- generic equilibrium, kinetic, and precipitation-dissolution reactions, which can be configured into reaction networks using the PALEO YAML configuration file.
+- pre-packaged reactions to simplify implementation of marine carbonate chemistry and a subset of secondary redox reactions, including support for carbon and sulphur isotope systems.
 
-**NB: work-in-progress - this repo contains an initial minimal example only to test infrastructure.**
+It can be used in two main ways:
+- to construct arbitrary aqueous biogeochemical models, including equilibrium, kinetic and precipitation-dissolution reactions for a configurable set of solute and solid-phase species.
+- to construct more-or-less standard ocean or sediment biogeochemical models (with commonly used carbonate chemistry, primary and secondary redox reactions) out of predefined components.
 
-## Using PALEOaqchem Reactions from other models
+## Installation
 
-The PALEOaqchem Reactions are available to the PALEO framework when the registered PALEOaqchem package is loaded (without downloading the repository), ie
+The PALEOaqchem Reactions are available to the [PALEOtoolkit](https://github.com/PALEOtoolkit) framework when the registered PALEOaqchem package is installed and loaded:
 
-    julia> Pkg.add("PALEOaqchem")
-    julia> import PALEOaqchem
+    julia> Pkg.add("PALEOaqchem")  # install PALEOaqchem in currently active Julia environment
+    julia> import PALEOaqchem 
 
-## PALEOaqchem.PALEOcarbchem notes
+## Documentation
 
-This submodule provides a carbonate chemistry equilibrium solver originally based on Matlab CO2SYS v1.1 (van Heuven et al 2011, Lewis and Wallace 1998) and refactored for speed and extensibility.
+Documentation is available online at <https://paleotoolkit.github.io/PALEOaqchem.jl/>
+
+## Examples of usage
+
+The [PALEOtutorials](https://github.com/PALEOtoolkit/PALEOtutorials.jl) repository includes a [minimal model of the marine carbonate system ](https://paleotoolkit.github.io/PALEOtutorials.jl/stable/collated_examples/configurable_chemistry/README/) implementated using PALEOaqchem generic chemistry.
+
+The [PALEOocean](https://github.com/PALEOtoolkit/PALEOocean.jl) and [PALEOsediment](https://github.com/PALEOtoolkit/PALEOsediment.jl) include examples of water column and sediment biogeochemistry.
+
+## Credits
+
+The PALEOcarbchem carbonate chemistry equilibrium code originally based on Matlab CO2SYS v1.1 ([van Heuven et al 2011](https://doi.org/10.3334/CDIAC/otg.CO2SYS_MATLAB_v1.1), [Lewis and Wallace 1998](https://salish-sea.pnnl.gov/media/ORNL-CDIAC-105.pdf)) and refactored for speed and extensibility.
 
 Please see <https://github.com/jamesorr/CO2SYS-MATLAB> for the current version of CO2SYS-MATLAB, history, and full citation information.
 
-The license for CO2SYS-MATLAB is included as the file LICENSE_CO2SYS.md.
-
-### Differences from CO2SYS-MATLAB
-- Refactored for speed, to allow use in numerical models.
-- Based on an older (2011) version 1.1 of CO2SYS Matlab
-- Uses CO2SYS Matlab equilibrium constants, with a reimplemented equilibrium calculation. NB: Although constants can be calculated for different pH scales, TAlk or pH calculations require constants to be on free pH scale.
-- H2S and NH3 added from Hofman etal (2010)
-
-## References
-
-Lewis, E. and Wallace, D. W. R. (1998) Program Developed for CO2
-System Calculations, ORNL/CDIAC-105, Carbon Dioxide Inf.  Anal. Cent.,
-Oak Ridge Natl. Lab., Oak Ridge, Tenn., 38 pp.,
-https://salish-sea.pnnl.gov/media/ORNL-CDIAC-105.pdf
-
-van Heuven, S., D. Pierrot, J.W.B. Rae, E. Lewis, and D.W.R. Wallace (2011)
-MATLAB Program Developed for CO2 System Calculations. ORNL/CDIAC-105b.  Carbon
-Dioxide Information Analysis Center, Oak Ridge National Laboratory, U.S.
-Department of Energy, Oak Ridge, Tennessee. https://doi.org/10.3334/CDIAC/otg.CO2SYS_MATLAB_v1.1
-
-Hofmann AF etal  (2010)
-AquaEnv : An Aquatic Acid–Base Modelling Environment in R.
-Aquatic Geochemistry, https://doi.org/10.1007/s10498-009-9084-1
+The license for CO2SYS-MATLAB is included as file LICENSE_CO2SYS.md.

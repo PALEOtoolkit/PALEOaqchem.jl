@@ -1,9 +1,15 @@
-# PALEOcarbchem
-
+# Carbonate chemistry
 ```@meta
 CurrentModule = PALEOaqchem
 ```
+Marine carbonate chemistry is implemented by the PALEO [`CarbChem.ReactionCO2SYS`](@ref)
+which uses an implementation provided by the [`PALEOcarbchem`](@ref) module.
 
+```@docs
+CarbChem.ReactionCO2SYS
+```
+
+# PALEOcarbchem
 ```@docs
 PALEOcarbchem
 ```
