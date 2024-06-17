@@ -1,4 +1,4 @@
-# PALEOaqchem Generic Chemical Reactions
+# Generic Chemistry
 
 ```@meta
 CurrentModule = PALEOaqchem
