@@ -84,7 +84,7 @@ function PB.register_methods!(rj::ReactionCO2SYS)
     base_vars = PB.VariableReaction[
         var_volume,
         PB.VarDep("rho_ref",          "kg m^-3",  "density conversion factor"),
-        PB.VarDep("temp",             "Kelvin",   "temperature"),
+        PB.VarDep("temp",             "K",        "temperature"),
         PB.VarDep("pressure",         "dbar",     "pressure"),
         PB.VarDep("sal",              "psu",      "salinity"),
     ]
