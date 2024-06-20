@@ -118,7 +118,7 @@ end
 function PB.register_methods!(rj::ReactionFluxToComponents)
 
     var_inputflux = PB.VarTarget(
-        "inputflux",  "mol m-3", "input flux", attributes=(:field_data=>rj.pars.field_data[],)
+        "inputflux",  "mol yr-1", "input flux", attributes=(:field_data=>rj.pars.field_data[],)
     )
 
     vars_outputflux = PB.Fluxes.FluxContrib(
