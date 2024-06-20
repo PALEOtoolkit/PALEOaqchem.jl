@@ -24,7 +24,7 @@ configfile = joinpath(@__DIR__, "configcarbchem.yaml")
 
     model = PB.create_model_from_config(configfile, "test_carbchem")
 
-    initial_state, modeldata = PALEOmodel.initialize!(model)
+    initial_state, modeldata = PALEOmodel.initialize!(model; check_units_opt=:error)
    
     run = PALEOmodel.Run(model=model, output = PALEOmodel.OutputWriters.OutputMemory())
 
@@ -58,7 +58,7 @@ end
 
     # add pH, TAlk to state variables and apply constraint on TAlk      
 
-    initial_state, modeldata = PALEOmodel.initialize!(model)
+    initial_state, modeldata = PALEOmodel.initialize!(model; check_units_opt=:error)
     
     run = PALEOmodel.Run(model=model, output = PALEOmodel.OutputWriters.OutputMemory())
 
@@ -106,7 +106,7 @@ end
         "test_carbchem_implicit";
     )
 
-    initial_state, modeldata = PALEOmodel.initialize!(model)
+    initial_state, modeldata = PALEOmodel.initialize!(model; check_units_opt=:error)
     
     run = PALEOmodel.Run(model=model, output = PALEOmodel.OutputWriters.OutputMemory())
 
