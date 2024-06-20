@@ -75,7 +75,7 @@ end
 
 function PB.register_methods!(rj::ReactionConstraintReservoir)
 
-    R_calc = PB.VarTarget("R_calc", "m-3", "contributions to total R_calc_conc (NB: a total, not concentration, to generalize to multiphase eqb)")
+    R_calc = PB.VarTarget("R_calc", "mol", "contributions to total R_calc_conc (NB: a total, not concentration, to generalize to multiphase eqb)")
 
     default_setup_vars = PB.VariableReaction[] # any state Variables that need "standard" setup (no volume conversions etc)
 
@@ -89,7 +89,7 @@ function PB.register_methods!(rj::ReactionConstraintReservoir)
             Primary_conc,
         ])
     elseif rj.pars.primary_variable[] == "amount"        
-        Primary = PB.VarState("Primary", "mol", "concentration of primary species")       
+        Primary = PB.VarState("Primary", "mol", "primary species")       
         PB.add_method_setup_initialvalue_vars_default!(
             rj, [Primary],
             convertvars = [primary_volume],
@@ -269,7 +269,7 @@ end
 
 function PB.register_methods!(rj::ReactionImplicitReservoir)
 
-    R_calc = PB.VarTarget("R_calc", "m-3", "contributions to total R_calc_conc (NB: a total, not concentration, to generalize to multiphase eqb)")
+    R_calc = PB.VarTarget("R_calc", "mol", "contributions to total R_calc_conc (NB: a total, not concentration, to generalize to multiphase eqb)")
 
     default_setup_vars = PB.VariableReaction[] # any state Variables that need "standard" setup (no volume conversions etc)
     
@@ -283,7 +283,7 @@ function PB.register_methods!(rj::ReactionImplicitReservoir)
             Primary_conc,
         ])
     elseif rj.pars.primary_variable[] == "amount"        
-        Primary = PB.VarStateTotal("Primary", "mol", "concentration of primary species")       
+        Primary = PB.VarStateTotal("Primary", "mol", "primary species")       
         PB.add_method_setup_initialvalue_vars_default!(
             rj, [Primary],
             convertvars = [primary_volume],
