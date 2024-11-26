@@ -106,7 +106,8 @@ Base.@kwdef mutable struct ReactionFluxToComponents{P} <: PB.AbstractReaction
             description="Suffixes for output flux names.  Use ::Isotope suffix to identify a flux with 'isotope_type'"),
         PB.ParDoubleVec("outputflux_stoich", [106.0, 16.0, 1.0],
             description="Stoichiometry for output fluxes relative to input flux"),
-
+        PB.ParBool("allow_unlinked_outputflux", false,
+            description="true to allow (and ignore) unlinked outputflux Variables, false to error if any outputflux Variable is not linked"),
         PB.ParType(PB.AbstractData, "field_data", PB.ScalarData,
             allowed_values=PB.IsotopeTypes,
             description="disable / enable isotopes and specify isotope type"),
@@ -123,8 +124,10 @@ function PB.register_methods!(rj::ReactionFluxToComponents)
 
     vars_outputflux = PB.Fluxes.FluxContrib(
         rj.pars.outputflux_prefix[], rj.pars.outputflux_names,
-        isotope_data=Dict("Isotope"=>rj.pars.field_data[]),
+        isotope_data=Dict("Isotope"=>rj.pars.field_data[]);
+        alloptional=rj.pars.allow_unlinked_outputflux[],
     )
+    PB.setfrozen!(rj.pars.outputflux_prefix, rj.pars.outputflux_names, rj.pars.field_data, rj.pars.allow_unlinked_outputflux)
 
     PB.add_method_initialize_zero_vars_default!(rj, [var_inputflux])
 
@@ -157,10 +160,6 @@ function do_flux_to_components(
         @inbounds for i in cellrange.indices
             outflux[i] += stoich*PB.get_total(var_inputflux[i])
         end
-        return nothing
-    end
-     # outflux is not linked
-     function do_outflux(outflux::Nothing, _, _)
         return nothing
     end
 
