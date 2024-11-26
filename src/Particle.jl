@@ -159,6 +159,10 @@ function do_flux_to_components(
         end
         return nothing
     end
+     # outflux is not linked
+     function do_outflux(outflux::Nothing, _, _)
+        return nothing
+    end
 
     PB.IteratorUtils.foreach_longtuple_p(
         do_outflux, vars_outflux, pars.outputflux_stoich, var_inputflux
