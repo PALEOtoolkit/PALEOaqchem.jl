@@ -20,11 +20,31 @@ where to convert density units for `K_eqb`:
 
     K_eqb' = K_eqb * rho_ref^K_density_power
 
-The first name in the `Reactants` list is the new species concentration: 
+The first name in the `Reactants` list is the new species concentration `N`: 
 other species concentrations in `Reactants` and `Products` lists must already be
 defined elsewhere in the model configuration.
 
-The contribution of the new species to element totals or components is defined by the `N_components` vector,
+The contribution of the new species to element totals or components is defined by the `N_components` vector, which may be empty eg to
+just calculate an Omega or a gas partial pressure etc.
+
+# Examples
+
+## Gas partial pressure from concentration
+
+    solubility_H2:
+        class: ReactionAqEqb
+        parameters:
+            Reactants:  ["pH2"]
+            Products:  ["H2_conc"]
+            K_eqb:      7.8e-1   # mol m-3 atm-1 at 298.15 K
+            K_power:   -1.0  #  pH2 = H2_conc * K_eqb^-1
+        variable_attributes:
+            pH2%units:   atm
+
+Compilation of Henry's law coefficients: https://www.henrys-law.org/  which is
+R. Sander: Compilation of Henry's law constants (version 5.0.0) for water as solvent, Atmos. Chem. Phys., 23, 10901-12440 (2023), doi:10.5194/acp-23-10901-2023
+
+Unit conversions:  1 mol m^-3 Pa-1 = 1.01325e5 mol m-3 atm-1
 
 # Parameters
 $(PARS)
@@ -47,8 +67,8 @@ Base.@kwdef mutable struct ReactionAqEqb{P} <: PB.AbstractReaction
             description="multiple K_eqb * rho_ref^K_density_power to convert units: 0.0 for K_eqb in mol m-3, 1.0 for K_eqb in mol kg-1, etc"),
         PB.ParDouble("K_power", -1.0, 
             description="exponent of K_eqb"),
-        PB.ParStringVec("N_components", ["2*TN_calc_conc"] ,
-            description="contribution of new species to element or component total concentrations (or empty vector to just define an Omega)"),
+        PB.ParStringVec("N_components", String[],
+            description="contribution of new species to element or component total eg '[\"2*TN_calc\"]' to add `2*N_conc*volume` to `TN_calc` (or empty vector to just define an Omega)"),
     )
 
     component_stoichs::Vector{Float64} = Float64[]
@@ -59,9 +79,8 @@ function PB.register_methods!(rj::ReactionAqEqb)
 
     @info "register_methods! $(PB.fullname(rj))"
 
-    vars = [
-        PB.VarDep("volume", "m3", "cell solute volume"),
-    ]
+    vars = PB.VariableReaction[]
+
     K_density_power = rj.pars.K_density_power[]
     if !iszero(K_density_power)
         push!(vars, PB.VarDep("rho_ref", "kg m-3", "reference density"))
@@ -97,6 +116,9 @@ function PB.register_methods!(rj::ReactionAqEqb)
         stoich, name = PB.parse_number_name(cv)
         push!(rj.component_stoichs, stoich)
         push!(component_vars, PB.VarContrib(name, "mol", "total moles"))
+    end
+    if !isempty(rj.component_stoichs)
+        push!(vars, PB.VarDep("volume", "m3", "cell solute volume"))
     end
 
     PB.setfrozen!(rj.pars.Reactants, rj.pars.Products, rj.pars.N_components)
