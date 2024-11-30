@@ -168,7 +168,8 @@ function do_flux_to_components(
     end
 
     PB.IteratorUtils.foreach_longtuple_p(
-        do_outflux, vars_outflux, pars.outputflux_stoich, var_inputflux
+        do_outflux, vars_outflux, pars.outputflux_stoich, var_inputflux;
+        errmsg="do_flux_to_components: $(PB.fullname(m.reaction)) ReactionFluxToComponents Parameters 'outputflux_names' and 'outputflux_stoich' lengths differ",
     )
 
     return nothing

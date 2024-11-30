@@ -78,7 +78,7 @@ function PB.register_methods!(rj::ReactionAqEqb)
     other_reactant_conc_vars = PB.VariableReaction[]
     other_reactant_powers = []
     for or_name_power in rj.pars.Reactants.v[2:end]
-        orp, orn = PALEOaqchem.parse_name_to_power_number(or_name_power)
+        orp, orn = PB.parse_name_to_power_number(or_name_power)
         push!(other_reactant_conc_vars, PB.VarDep(orn, "mol m-3", "aqueous concentration or activity"))
         push!(other_reactant_powers, orp)
     end
@@ -86,7 +86,7 @@ function PB.register_methods!(rj::ReactionAqEqb)
     product_conc_vars = PB.VariableReaction[]
     product_powers = []
     for pr_name_power in rj.pars.Products
-        pp, pn = PALEOaqchem.parse_name_to_power_number(pr_name_power)
+        pp, pn = PB.parse_name_to_power_number(pr_name_power)
         push!(product_conc_vars, PB.VarDep(pn, "mol m-3", "aqueous concentration or activity"))
         push!(product_powers, pp)
     end
@@ -94,7 +94,7 @@ function PB.register_methods!(rj::ReactionAqEqb)
     empty!(rj.component_stoichs)
     component_vars = PB.VariableReaction[]
     for cv in rj.pars.N_components
-        stoich, name = PALEOaqchem.parse_number_name(cv)
+        stoich, name = PB.parse_number_name(cv)
         push!(rj.component_stoichs, stoich)
         push!(component_vars, PB.VarContrib(name, "mol", "total moles"))
     end
@@ -195,13 +195,13 @@ function PB.register_methods!(rj::ReactionAqKinetic)
     reactant_names = String[]
     all_stoich = Float64[]
     for rns in rj.pars.Reactants
-        stoich, name = PALEOaqchem.parse_number_name(rns)
+        stoich, name = PB.parse_number_name(rns)
         push!(all_stoich, -1*stoich) # -1 for reactant 
         push!(reactant_names, String(name))
     end
     product_names = String[]
     for pns in rj.pars.Products
-        stoich, name = PALEOaqchem.parse_number_name(pns)
+        stoich, name = PB.parse_number_name(pns)
         push!(all_stoich, stoich)
         push!(product_names, String(name))
     end
@@ -341,13 +341,13 @@ function PB.register_methods!(rj::ReactionAqPrecipDissol)
     reactant_names = String[]
     all_stoich = Float64[]
     for rns in rj.pars.Reactants
-        stoich, name = PALEOaqchem.parse_number_name(rns)
+        stoich, name = PB.parse_number_name(rns)
         push!(all_stoich, -1*stoich) # -1 for reactant 
         push!(reactant_names, String(name))
     end
     product_names = String[]
     for pns in rj.pars.Products
-        stoich, name = PALEOaqchem.parse_number_name(pns)
+        stoich, name = PB.parse_number_name(pns)
         push!(all_stoich, stoich)
         push!(product_names, String(name))
     end

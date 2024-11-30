@@ -37,38 +37,8 @@ function O2AlkUptakeRemin(Corg, (NO3, TNH3, Ngas), TPO4, Ccarb; rO2Corg=1)
     return (O2, Alk)
 end
 
-"""
-    parse_number_name(nname::AbstractString) -> (number, name)
-
-Parse a string of form "-1*A"
-
-"""
-function parse_number_name(nname::AbstractString; sep=['*', ' '], number_first=true)
-
-    # parse multiplier
-    svmn = split(nname, sep, keepempty=false)
-    if length(svmn) == 1
-        mult, name = 1, svmn[1]
-    elseif length(svmn) == 2
-        if !number_first
-            tmp = svmn[1]
-            svmn[1] = svmn[2]
-            svmn[2] = tmp
-        end
-        mult = tryparse(Int64, svmn[1])
-        if isnothing(mult)
-            mult = tryparse(Float64, svmn[1])
-        end
-        name = svmn[2]
-    end
-
-    !isnothing(mult) || 
-        error("invalid field in nname, not of form number*name: ", nname)
-  
-    return (mult, name)
-end
-
-parse_name_to_power_number(nname::AbstractString) = parse_number_name(nname; sep=['^', ' '], number_first=false)
+Base.@deprecate_moved parse_number_name "PALEOboxes"
+Base.@deprecate_moved parse_name_to_power_number "PALEOboxes"
 
 const _R_conc_attributes_base = (
     # :field_data=>rj.pars.field_data[],
