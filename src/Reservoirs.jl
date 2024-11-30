@@ -115,7 +115,7 @@ function PB.register_methods!(rj::ReactionConstraintReservoir)
     empty!(rj.component_stoichs)
     component_vars = PB.VariableReaction[]
     for cv in rj.pars.primary_other_components
-        stoich, name = PALEOaqchem.parse_number_name(cv)
+        stoich, name = PB.parse_number_name(cv)
         push!(rj.component_stoichs, stoich)
         push!(component_vars, PB.VarContrib(name, "mol", "total moles"))
     end
@@ -309,7 +309,7 @@ function PB.register_methods!(rj::ReactionImplicitReservoir)
     empty!(rj.component_stoichs)
     component_vars = PB.VariableReaction[]
     for cv in rj.pars.primary_other_components
-        stoich, name = PALEOaqchem.parse_number_name(cv)
+        stoich, name = PB.parse_number_name(cv)
         push!(rj.component_stoichs, stoich)
         push!(component_vars, PB.VarContrib(name, "mol", "total moles"))
     end
@@ -455,7 +455,7 @@ function PB.register_methods!(rj::ReactionAqConcSum)
 
     for varmultname in rj.pars.vars_to_add
         # parse multiplier
-        mult, varname = PALEOaqchem.parse_number_name(varmultname)
+        mult, varname = PB.parse_number_name(varmultname)
         println(io, "    add $mult * $varname")
         push!(rj.var_multipliers, mult)
 

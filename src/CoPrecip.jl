@@ -43,7 +43,7 @@ function PB.register_methods!(rj::ReactionPACoPrecip)
 
     @info "register_methods! $(PB.fullname(rj))"
 
-    P_stoichcomponents = PALEOaqchem.parse_number_name.(rj.pars.P_components.v)
+    P_stoichcomponents = PB.parse_number_name.(rj.pars.P_components.v)
     PB.setfrozen!(rj.pars.P_components)
     
     stoich_PA_coprecip = PB.RateStoich(
@@ -131,7 +131,7 @@ function PB.register_methods!(rj::ReactionPARelease)
 
     @info "register_methods! $(PB.fullname(rj))"
 
-    P_stoichcomponents = PALEOaqchem.parse_number_name.(rj.pars.P_components.v)
+    P_stoichcomponents = PB.parse_number_name.(rj.pars.P_components.v)
     PB.setfrozen!(rj.pars.P_components)
 
     stoich_PA_release = PB.RateStoich(

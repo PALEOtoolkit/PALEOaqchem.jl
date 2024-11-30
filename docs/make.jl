@@ -24,6 +24,7 @@ makedocs(;
             "Generic Chemistry.md",
             "Secondary Redox.md",
             "Carbonate chemistry.md",
+            "Molecular Diffusivity.md",
             "Isotopes.md",
             "functions.md",
             
