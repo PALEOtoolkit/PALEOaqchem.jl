@@ -36,7 +36,7 @@ just calculate an Omega or a gas partial pressure etc.
         parameters:
             Reactants:  ["pH2"]
             Products:  ["H2_conc"]
-            K_eqb:      7.8e-1   # mol m-3 atm-1 at 298.15 K
+            K_eqb:      7.8e-1   # mol m-3 atm-1 at 298.15 K (Henry's law coefficent)
             K_power:   -1.0  #  pH2 = H2_conc * K_eqb^-1
         variable_attributes:
             pH2%units:   atm
