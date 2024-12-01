@@ -151,14 +151,14 @@ function do_flux_to_components(
     # inputflux and outflux are the same type (both isotopes, or both scalars)
     function do_outflux(outflux::AbstractVector{T}, stoich, inputflux::AbstractVector{T})  where {T}
         @inbounds for i in cellrange.indices
-            outflux[i] += stoich*var_inputflux[i]
+            outflux[i] += stoich*inputflux[i]
         end
         return nothing
     end
     # outflux is a scalar and inputflux is an isotope
-    function do_outflux(outflux, stoich, _)
+    function do_outflux(outflux, stoich, inputflux)
         @inbounds for i in cellrange.indices
-            outflux[i] += stoich*PB.get_total(var_inputflux[i])
+            outflux[i] += stoich*PB.get_total(inputflux[i])
         end
         return nothing
     end
@@ -169,7 +169,7 @@ function do_flux_to_components(
 
     PB.IteratorUtils.foreach_longtuple_p(
         do_outflux, vars_outflux, pars.outputflux_stoich, var_inputflux;
-        errmsg="do_flux_to_components: $(PB.fullname(m.reaction)) ReactionFluxToComponents Parameters 'outputflux_names' and 'outputflux_stoich' lengths differ",
+        errmsg="do_flux_to_components: ReactionFluxToComponents Parameters 'outputflux_names' and 'outputflux_stoich' lengths differ",
     )
 
     return nothing

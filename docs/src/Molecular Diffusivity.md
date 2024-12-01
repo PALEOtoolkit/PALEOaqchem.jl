@@ -10,5 +10,5 @@ sw_dynamic_viscosity
 ```
 
 ```@docs
-ReactionAqMolecularDiffusion
+ReactionAqMolecularDiffusivity
 ```

@@ -278,14 +278,16 @@ end
 
 
 """
-    ReactionAqMolecularDiffusion
+    ReactionAqMolecularDiffusivity
 
-Calculate molecular diffusivity from `:diffusivity_speciesname` attributes of aqueous solution concentration Variables
+Calculate molecular diffusivity (`cm^s s-1`) from `:diffusivity_speciesname` attributes of aqueous solution concentration Variables
 
+A Variable `<species>_moldiff` is created for each `<species>_conc` Variable with non-empty `:diffusivity_speciesname` attribute.
+    
 `:diffusivity_speciesname` may either be a known species (in which case it is looked up in [`create_solute_diffusivity_func`](@ref)),
 or a constant value in `cm^2 s-1` supplied as a String.
 """
-Base.@kwdef mutable struct ReactionAqMolecularDiffusion{P} <: PB.AbstractReaction
+Base.@kwdef mutable struct ReactionAqMolecularDiffusivity{P} <: PB.AbstractReaction
     base::PB.ReactionBase
 
     pars::P = PB.ParametersTuple(
@@ -297,18 +299,21 @@ Base.@kwdef mutable struct ReactionAqMolecularDiffusion{P} <: PB.AbstractReactio
 end
 
 
-function PB.register_methods!(rj::ReactionAqMolecularDiffusion)
+function PB.register_methods!(rj::ReactionAqMolecularDiffusivity)
     return nothing
 end
 
-function PB.register_dynamic_methods!(rj::ReactionAqMolecularDiffusion)
+function PB.register_dynamic_methods!(rj::ReactionAqMolecularDiffusivity)
 
-    # Most of the complexity here is so that functions for tabulations of molecular diffusivity can be defined by variable attributes,
-    # which may only have dummy values from the YAML file with modified values not be available until later.
-    # The variables are created here (where the :species_diffusivityname attribute from the YAML file just needs to be non-empty)
+    # Most of the complexity here is so that the functions for tabulations of molecular diffusivity (defined by variable attributes)
+    # can be created as late as possible whilst retaining type stability. 
+    # Only dummy (non-empty) values for the :species_diffusivityname attributes are needed in the YAML file to define the set of variables,
+    # which happens in this method below.
     # The actual values of the attributes can then be modified if needed.
-    # The functions are created later by prepare_do_molecular_diffusivity (called from PALEOmodel.initialise!), and can't subsequently be changed.
-    # The :species_diffusivityname attributes are checked for invalid modifications (eg if modified and the model rerun) by the setup method.
+    # The functions are created later by prepare_do_molecular_diffusivity (called from PALEOmodel.initialise!),
+    # and can't subsequently be changed (they can't just be created in the setup method as that won't be type stable hence would be very slow).
+    # The :species_diffusivityname attributes are checked by the setup method for invalid modifications that would change either the
+    # set of variables or the functions needed.
 
     phys_vars = [
         PB.VarDep("temp",       "Kelvin",   "temperature"),
@@ -321,7 +326,7 @@ function PB.register_dynamic_methods!(rj::ReactionAqMolecularDiffusion)
     vars_moldiff = [PB.VarProp(rootname*"_moldiff", "cm^2 s-1", "solute molecular diffusivity") for rootname in rj.solute_var_rootnames]
 
     # check that :diffusivity_speciesname attributes haven't been changed
-    # (required as we can't change the functions used to calculate diffusivity)
+    # (required as we can't change either the set of variables or the functions used to calculate diffusivity)
     PB.add_method_setup!(
         rj,
         setup_molecular_diffusivity,
@@ -366,13 +371,12 @@ function find_solute_diffusivity_vars(domain::PB.Domain)
     return solute_var_rootnames
 end
 
-"read :diffusivity_speciesname attribute for Variables with root names solute_var_rootnames"
+"read :diffusivity_speciesname attribute for Variables"
 function read_diffusivity_speciesnames(domain::PB.Domain, solute_var_rootnames)
     diffusivity_speciesnames = String[]
 
     for sv_rootname in solute_var_rootnames
         dv_conc = PB.get_variable(domain, sv_rootname*"_conc")
-        # solute diffusivity accessors and calculation method
         diffusivity_speciesname = PB.get_attribute(dv_conc, :diffusivity_speciesname, missing)
         if ismissing(diffusivity_speciesname) || isempty(diffusivity_speciesname)
             @error("read_diffusivity_speciesnames: no :diffusivity_speciesname attribute found for Variable $(PB.fullname(dv_conc))")
@@ -396,11 +400,12 @@ function prepare_do_molecular_diffusivity(m::PB.ReactionMethod, vardata)
 end
 
 "check that Variable :diffusivity_speciesname attributes haven't changed"
-function setup_molecular_diffusivity(m::PB.ReactionMethod, _, _, _)
+function setup_molecular_diffusivity(m::PB.ReactionMethod, _, _, attribute_name)
+    attribute_name == :setup || return
     rj = m.reaction
 
     io = IOBuffer()
-    println(io, "setup_molecular_diffusivity: $(PB.fullname(rj)) ReactionAqMolecularDiffusion")
+    println(io, "setup_molecular_diffusivity: $(PB.fullname(rj)) ReactionAqMolecularDiffusivity")
     println(io)
     Printf.@printf(io, "    %30s%40s\n", "Mol. Diff. Variable", "species or value (cm^2 s-1)")
     for (svrn, dsn) in PB.IteratorUtils.zipstrict(rj.solute_var_rootnames, rj.diffusivity_speciesnames)
@@ -429,17 +434,18 @@ function do_molecular_diffusivity(
     deltat
 )
     
-    function calc_solute_species_diffusivity(v_moldiff, fn_moldiff)
+    function calc_solute_species_diffusivity(v_moldiff, fn_moldiff, pv)
         @inbounds for i in cellrange.indices
             #   cm^2 s-1                                 bar/dbar  * dbar
-            v_moldiff[i] = fn_moldiff(phys_vars.temp[i], 0.1*phys_vars.pressure[i]+1.0, phys_vars.sal[i])
+            v_moldiff[i] = fn_moldiff(pv.temp[i], 0.1*pv.pressure[i]+1.0, pv.sal[i])
         end
     end
 
-    PB.IteratorUtils.foreach_longtuple(
+    PB.IteratorUtils.foreach_longtuple_p(
         calc_solute_species_diffusivity,
         vars_moldiff,
         fns_moldiff,
+        phys_vars,
     )
 
     return nothing
