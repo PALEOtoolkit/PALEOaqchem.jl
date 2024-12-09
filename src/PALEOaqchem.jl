@@ -37,8 +37,8 @@ function O2AlkUptakeRemin(Corg, (NO3, TNH3, Ngas), TPO4, Ccarb; rO2Corg=1)
     return (O2, Alk)
 end
 
-Base.@deprecate_moved parse_number_name "PALEOboxes"
-Base.@deprecate_moved parse_name_to_power_number "PALEOboxes"
+Base.@deprecate_binding parse_number_name PB.parse_number_name
+Base.@deprecate_binding parse_name_to_power_number PB.parse_name_to_power_number
 
 const _R_conc_attributes_base = (
     # :field_data=>rj.pars.field_data[],
