@@ -133,7 +133,7 @@ end
                 xCO2dryinp= 0.000600944914072491)
 
     CI = PALEOcarbchem.CNameIdx
-    Concs = (TCi=[2000e-6], TS=modernC.TS, TF=modernC.TF, TSi=[1e-3], TP=[1e-6],  TB=modernC.TB, TH2S=[1e-6], TNH3=[1e-6], Ca=modernC.Ca)
+    Concs = (TCi=2000e-6, TS=modernC.TS, TF=modernC.TF, TSi=1e-3, TP=1e-6,  TB=modernC.TB, TH2S=1e-6, TNH3=1e-6, Ca=modernC.Ca)
   
     resarray = Vector{Float64}(undef, length(PALEOcarbchem.RNameIdx))
     (TA, dTAdpH) = PALEOcarbchem.calculateTAfromTCpHfree!(resarray, C, Options, Concs, 8.0, do_dTAdpH=Val(true))
