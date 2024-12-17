@@ -51,7 +51,7 @@ function bench_TAfromTCpHfree()
     PALEOcarbchem.calc_constants!(C, TempC, Pdbar, Sal, Options=Options)
     modernC = PALEOcarbchem.calc_modern_default_concs(Sal, Options=Options)
 
-    Concs = (TCi=[2000e-6], TS=[modernC.TS], TF=[modernC.TF], TSi=[1e-3], TP=[1e-6],  TB=[modernC.TB], TH2S=[1e-6], TNH3=[1e-6], Ca=[modernC.Ca])
+    Concs = (TCi=2000e-6, TS=modernC.TS, TF=modernC.TF, TSi=1e-3, TP=1e-6,  TB=modernC.TB, TH2S=1e-6, TNH3=1e-6, Ca=modernC.Ca)
 
     resarray = Vector{Float64}(undef, length(PALEOcarbchem.RNameIdx))
     println("do_dTAdpH=false")
@@ -68,7 +68,7 @@ function bench_pHfromTATC()
     PALEOcarbchem.calc_constants!(C, TempC, Pdbar, Sal, Options=Options)
     modernC = PALEOcarbchem.calc_modern_default_concs(Sal, Options=Options)
 
-    Concs = (TCi=[2000e-6], TS=[modernC.TS], TF=[modernC.TF], TSi=[1e-3], TP=[1e-6],  TB=[modernC.TB], TH2S=[1e-6], TNH3=[1e-6], Ca=[modernC.Ca])
+    Concs = (TCi=2000e-6, TS=modernC.TS, TF=modernC.TF, TSi=1e-3, TP=1e-6,  TB=modernC.TB, TH2S=1e-6, TNH3=1e-6, Ca=modernC.Ca)
 
     resarray = Vector{Float64}(undef, length(PALEOcarbchem.RNameIdx))
    
@@ -116,7 +116,7 @@ function bench_TAfromTCpHfree_simd()
     PALEOcarbchem.calc_constants!(C, TempC, Pdbar, Sal, Options=Options)
     modernC = PALEOcarbchem.calc_modern_default_concs(Sal, Options=Options)
 
-    Concs = (TCi=[ES(2000e-6)], TS=[modernC.TS], TF=[modernC.TF], TSi=[ES(1e-3)], TP=[ES(1e-6)],  TB=[modernC.TB], TH2S=[ES(1e-6)], TNH3=[ES(1e-6)], Ca=[modernC.Ca])
+    Concs = (TCi=ES(2000e-6), TS=modernC.TS, TF=modernC.TF, TSi=ES(1e-3), TP=ES(1e-6),  TB=modernC.TB, TH2S=ES(1e-6), TNH3=ES(1e-6), Ca=modernC.Ca)
 
     pHstart = ES(8.0)
     resarray = Vector{ES}(undef, length(PALEOcarbchem.RNameIdx))
@@ -135,7 +135,7 @@ function bench_pHfromTATC_simd()
     PALEOcarbchem.calc_constants!(C, TempC, Pdbar, Sal, Options=Options)
     modernC = PALEOcarbchem.calc_modern_default_concs(Sal, Options=Options)
 
-    Concs = (TCi=[ES(2000e-6)], TS=[modernC.TS], TF=[modernC.TF], TSi=[ES(1e-3)], TP=[ES(1e-6)],  TB=[modernC.TB], TH2S=[ES(1e-6)], TNH3=[ES(1e-6)], Ca=[modernC.Ca])
+    Concs = (TCi=ES(2000e-6), TS=modernC.TS, TF=modernC.TF, TSi=ES(1e-3), TP=ES(1e-6),  TB=modernC.TB, TH2S=ES(1e-6), TNH3=ES(1e-6), Ca=modernC.Ca)
 
     resarray = Vector{ES}(undef, length(PALEOcarbchem.RNameIdx))
    

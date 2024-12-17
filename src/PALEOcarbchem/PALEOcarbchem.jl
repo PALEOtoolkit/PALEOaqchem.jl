@@ -38,7 +38,7 @@ julia> modern_concs = PALEOcarbchem.calc_modern_default_concs(35.0, Options=opti
 julia> map(x -> @sprintf("%.14e", x), modern_concs)
 (TF = "6.83258396883673e-05", TS = "2.82354341328601e-02", TB = "4.15700000000000e-04", Ca = "1.02845697008497e-02")
 
-julia> input_concs = (TCi=[2000e-6], TS=[modern_concs.TS], TF=[modern_concs.TF], TSi=[1e-3], TP=[1e-6],  TB=[modern_concs.TB], TH2S=[1e-6], TNH3=[1e-6], Ca=[modern_concs.Ca]);  # all in mol kg-1
+julia> input_concs = (TCi=2000e-6, TS=modern_concs.TS, TF=modern_concs.TF, TSi=1e-3, TP=1e-6,  TB=modern_concs.TB, TH2S=1e-6, TNH3=1e-6, Ca=modern_concs.Ca);  # all in mol kg-1
 
 julia> res = zeros(length(PALEOcarbchem.ResultNames));
 

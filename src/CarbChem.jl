@@ -264,7 +264,7 @@ function prepare_do_carbchem(m::PB.ReactionMethod, (vars, input_concs, outputs))
     # create per-thread buffers for temporary results
     Constants_tbuf  = [Vector{BufType}(undef, length(PALEOcarbchem.CNameIdx)) for t in 1:Threads.nthreads()]    
     res_tbuf    = [Vector{BufType}(undef, length(PALEOcarbchem.RNameIdx)) for t in 1:Threads.nthreads()]
-    input_concs_cell_tbuf = [PB.IteratorUtils.named_tuple_ref(keys(input_concs), BufType) for t in 1:Threads.nthreads()]
+    input_concs_cell_tbuf = [Vector{BufType}(undef, length(input_concs)) for t in 1:Threads.nthreads()]
 
     buffers = (Constants_tbuf, res_tbuf, input_concs_cell_tbuf)
 
@@ -290,7 +290,7 @@ function do_carbchem(
 
     Constants           = Constants_tbuf[Threads.threadid()] # get per thread buffer. threadid()=1 for a single-threaded app
     res                 = res_tbuf[Threads.threadid()]
-    input_concs_cell    = input_concs_cell_tbuf[Threads.threadid()]
+    input_concs_cell_v  = input_concs_cell_tbuf[Threads.threadid()]
 
     BufType = eltype(Constants)
 
@@ -314,15 +314,12 @@ function do_carbchem(
         )
       
         # Set 'input_concs_cell' with 'input_concs' for this cell
-        # NB: a Julia bug (v1.7), map allocates so can't just create a NamedTuple
-        # workaround using a 'mutable NamedTuple' buffer 'input_concs_cell' which has same fields as 'input_concs'
-        for (ic_cell, ic) in PB.IteratorUtils.zipstrict(values(input_concs_cell), values(input_concs))
-           ic_cell[] = r_rhofac*PB.SIMDutils.vgatherind(BufType, ic, i)
+        # To avoid allocations, first write into a Vector, then create a NamedTuple
+        for (j, ic) in enumerate(values(input_concs))
+           input_concs_cell_v[j] = r_rhofac*PB.SIMDutils.vgatherind(BufType, ic, i)
         end
-        # TODO allocates ? (Julia 1.9.0-rc2)
-        # PB.IteratorUtils.foreach_tuple(values(input_concs_cell), values(input_concs)) do ic_cell, ic
-        #    ic_cell[] = r_rhofac*PB.SIMDutils.vgatherind(BufType, ic, i)
-        # end
+        input_concs_cell = NamedTuple{keys(input_concs), NTuple{length(input_concs), BufType}}(input_concs_cell_v)
+        
 
         if solve_pH == Val(true)  # this will be a compile-time switch as solve_pH Type is part of method signature
                     #   mol       / m^3         / kg m-3    
@@ -366,8 +363,8 @@ function do_carbchem(
                     pHfree, 
                     Val(3),  # scalein - Free
                     Val(1),  # scaleout - Total
-                    input_concs_cell.TS[], 
-                    input_concs_cell.TF[],
+                    input_concs_cell.TS, 
+                    input_concs_cell.TF,
                 ),
                 vars.pHtot, 
                 i,
@@ -388,5 +385,6 @@ function do_carbchem(
 
     return nothing
 end
+
 
 end

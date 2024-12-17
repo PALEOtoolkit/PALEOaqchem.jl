@@ -98,7 +98,7 @@ Calculate TAlk, and speciation, given pH and conserved concentrations (total DIC
 # Arguments:
 - `res`:  (output) Vector `res` of length length([`ResultNames`](@ref)) with details of TA contributions etc
 - `C`: constants from [`calc_constants!`](@ref). NB: must be on Free pH scale.
-- `concs::NamedTuple`: (mol kg-sw, NB: each element should be a Ref or length 1 Vector)  total concentrations for sulphate, fluoride, and each optional component of alkalinity enabled in `C`
+- `concs::NamedTuple`: (mol kg-sw)  total concentrations for sulphate, fluoride, and each optional component of alkalinity enabled in `C`
 - `pHfree`: pH on free scale
 
 # Implementation
@@ -131,7 +131,7 @@ function calculateTAfromTCpHfree!(
 
     # sulphate 
     if Options.Components.S == Val(true)
-        TS      = concs.TS[]
+        TS      = concs.TS
         HSO4    = TS/(1 + C[CI.KS]/H);# ' since KS is on the free scale
         TA      += -HSO4
         r[RI.TS]= TS; r[RI.HSO4]=HSO4       
@@ -143,7 +143,7 @@ function calculateTAfromTCpHfree!(
 
     # fluoride
     if Options.Components.F == Val(true)
-        TF      = concs.TF[]
+        TF      = concs.TF
         HF      = TF/(1 + C[CI.KF]/H);# ' since KF is on the free scale
         TA      += -HF
         r[RI.TF] = TF; r[RI.HF] = HF
@@ -155,7 +155,7 @@ function calculateTAfromTCpHfree!(
 
     # Inorganic carbon
     if Options.Components.Ci == Val(true)
-        TCi = concs.TCi[]
+        TCi = concs.TCi
         # Inorganic carbon
         CDenom      = (C[CI.K1]*H + H*H + C[CI.K1]*C[CI.K2]);
         HCO3      = TCi*C[CI.K1]*H  / CDenom;
@@ -184,7 +184,7 @@ function calculateTAfromTCpHfree!(
 
     # Boron
     if Options.Components.B == Val(true)
-        TB        = concs.TB[]
+        TB        = concs.TB
         BAlk      = TB*C[CI.KB]/(C[CI.KB] + H)
         TA        += BAlk
         r[RI.TB]=TB; r[RI.BAlk]=BAlk
@@ -196,7 +196,7 @@ function calculateTAfromTCpHfree!(
 
     # Phosphate
     if Options.Components.P == Val(true)
-        TP = concs.TP[]
+        TP = concs.TP
         PhosBot     = H*H*H + C[CI.KP1]*H*H + C[CI.KP1]*C[CI.KP2]*H + C[CI.KP1]*C[CI.KP2]*C[CI.KP3]
         H3PO4     = TP*H*H*H/PhosBot;        # neutral    Alk -1
         H2PO4     = TP*C[CI.KP1]*H*H/PhosBot;       # 1-         zero level of protons
@@ -227,7 +227,7 @@ function calculateTAfromTCpHfree!(
 
     # Silicate
     if Options.Components.Si == Val(true)
-        TSi = concs.TSi[]
+        TSi = concs.TSi
         SiAlk     = TSi*C[CI.KSi]/(C[CI.KSi] + H)
         TA      += SiAlk
         if do_dTAdpH == Val(true)
@@ -239,7 +239,7 @@ function calculateTAfromTCpHfree!(
 
     # Sulphide
     if Options.Components.H2S == Val(true)
-        TH2S = concs.TH2S[]
+        TH2S = concs.TH2S
         HSAlk     = TH2S*C[CI.KH2S]/(C[CI.KH2S] + H)
         H2S       = TH2S - HSAlk
         TA       += HSAlk
@@ -252,7 +252,7 @@ function calculateTAfromTCpHfree!(
 
     # Ammonia
     if Options.Components.NH3 == Val(true)
-        TNH3      = concs.TNH3[]
+        TNH3      = concs.TNH3
         NH3Alk    = TNH3*C[CI.KNH3]/(C[CI.KNH3] + H)
         NH4       = TNH3 - NH3Alk
         TA        += NH3Alk
@@ -265,7 +265,7 @@ function calculateTAfromTCpHfree!(
 
     # Carbonate saturation (not a contribution to alkalinity !)
     if Options.Components.Omega == Val(true)
-        Ca      = concs.Ca[]
+        Ca      = concs.Ca
         (OmegaCA, OmegaAR) = calculateOmega(C, CO3, Ca)
         r[RI.Ca]=Ca; r[RI.OmegaCA]=OmegaCA; r[RI.OmegaAR]=OmegaAR
     end
